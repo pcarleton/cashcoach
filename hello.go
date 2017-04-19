@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/sessions"
 	"google.golang.org/api/plus/v1"
 	"encoding/hex"
+	"net/url"
 )
 
 const (
@@ -104,10 +105,11 @@ func init() {
 	cookieStore = sessions.NewCookieStore(secret)
 }
 
-func logHandler(msg string) (func(w http.ResponseWriter, r *http.Request)) {
-	return func(w http.ResponseWriter, r *http.Request) {
+func logHandler(msg string) (func(w http.ResponseWriter, r *http.Request) *appError) {
+	return func(w http.ResponseWriter, r *http.Request) *appError {
 		log.Printf("request from %v\n", r.RemoteAddr)
 		w.Write([]byte(msg))
+		return nil
 	}
 }
 
@@ -130,6 +132,37 @@ func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type restricted func(http.ResponseWriter, *http.Request) *appError
+
+func makeLoginUrl(path string) string {
+	vals := url.Values{}
+	vals.Set("redirect", path)
+
+	return "/login?" + vals.Encode()
+}
+
+func (fn restricted) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	profile := profileFromSession(r)
+	if profile == nil {
+		loginUrl, err := validateRedirectURL(makeLoginUrl(r.URL.Path))
+
+		if err != nil {
+			log.Printf("Error redirecting to login %#v", err)
+			http.Error(w, "Problem redirecting to login", 500)
+			return
+		}
+
+		http.Redirect(w, r, loginUrl, 302)
+	}
+
+	if e := fn(w, r); e != nil { // e is *appError, not os.Error.
+		log.Printf("Handler error: status code: %d, message: %s, underlying err: %#v",
+			e.Code, e.Message, e.Error)
+
+		http.Error(w, e.Message, e.Code)
+	}
+}
+
 func appErrorf(err error, format string, v ...interface{}) *appError {
 	return &appError{
 		Error:   err,
@@ -140,8 +173,10 @@ func appErrorf(err error, format string, v ...interface{}) *appError {
 
 
 func main() {
-	http.HandleFunc("/", logHandler("hello") )
+	http.Handle("/", appHandler(logHandler("<a href='login?redirect=restricted'>Login</a>")))
+	http.Handle("/restricted", restricted(logHandler("hello")))
 	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
 	http.Handle("/login", appHandler(loginHandler))
+	http.Handle("/logout", appHandler(logoutHandler))
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }

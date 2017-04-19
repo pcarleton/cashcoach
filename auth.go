@@ -110,7 +110,6 @@ func oauthCallbackHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "could not fetch userinfo")
 	}
 
-	log.Printf("Person: %v\n", person)
 	session.Values[oauthTokenSessionKey] = tok
 	session.Values[emailKey] = stripProfile(person)
 	if err := session.Save(r, w); err != nil {
