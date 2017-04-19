@@ -172,11 +172,33 @@ func appErrorf(err error, format string, v ...interface{}) *appError {
 }
 
 
+func meHandler(w http.ResponseWriter, r *http.Request) *appError {
+	profile := profileFromSession(r)
+
+	var js []byte
+	var err error
+	if profile == nil {
+		js, err = json.Marshal(map[string]string{"error": "Unauthenticated"})
+	} else {
+		js, err = json.Marshal(map[string]string{"name": profile.DisplayName})
+	}
+
+	if err != nil {
+		return appErrorf(err, "Problem marshaling JS")
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(js)
+	return nil
+}
+
 func main() {
 	http.Handle("/", appHandler(logHandler("<a href='login?redirect=restricted'>Login</a>")))
 	http.Handle("/restricted", restricted(logHandler("hello")))
 	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
 	http.Handle("/login", appHandler(loginHandler))
 	http.Handle("/logout", appHandler(logoutHandler))
+	http.Handle("/me", appHandler(meHandler))
+
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }

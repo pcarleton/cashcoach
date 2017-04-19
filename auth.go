@@ -7,7 +7,6 @@ import (
 	"github.com/satori/go.uuid"
 	"golang.org/x/oauth2"
 	"golang.org/x/net/context"
-	"log"
 	"google.golang.org/api/plus/v1"
 	"encoding/gob"
 )
@@ -32,16 +31,24 @@ type Profile struct {
 func loginHandler(w http.ResponseWriter, r *http.Request) *appError {
 	sessionID := uuid.NewV4().String()
 
+	redirectURL, err := validateRedirectURL(r.FormValue("redirect"))
+	if err != nil {
+		return appErrorf(err, "invalid redirect URL: %v", err)
+	}
+
+	profile := profileFromSession(r)
+
+	if profile != nil {
+		http.Redirect(w, r, redirectURL, http.StatusFound)
+	}
+
 	oauthFlowSession, err := cookieStore.New(r, sessionID)
 	if err != nil {
 		return appErrorf(err, "could not create oauth session: %v", err)
 	}
 	oauthFlowSession.Options.MaxAge = 10 * 60 // 10 minutes
 
-	redirectURL, err := validateRedirectURL(r.FormValue("redirect"))
-	if err != nil {
-		return appErrorf(err, "invalid redirect URL: %v", err)
-	}
+
 	oauthFlowSession.Values[oauthFlowRedirectKey] = redirectURL
 
 	if err := oauthFlowSession.Save(r, w); err != nil {
