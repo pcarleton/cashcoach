@@ -11,26 +11,29 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"github.com/gorilla/sessions"
+	"google.golang.org/api/plus/v1"
+	"encoding/hex"
 )
 
 const (
-	sessionName = "session-name"
-	stateKey = "session-id"
 	oauthCallbackUrl = "http://localhost:5000/oauth2callback"
+	secretsPathEnv = "CLIENT_SECRETS_PATH"
+	cookieSecretEnv = "COOKIE_SECRET"
 )
 
 var MissingConfigError = errors.New("Missing client secrets config path in environment")
 var BadConfigError = errors.New("Unparseable config data")
 
 var envVars = map[string]string {
-	"CLIENT_SECRETS_PATH": "Path to OAuth client id and secrets json file",
-	//"COOKIE_SECRET": "Hex encoded 32 byte secret for encrypting cookies",
+	secretsPathEnv: "Path to OAuth client id and secrets json file",
+	cookieSecretEnv: "Hex encoded 32 byte secret for encrypting cookies",
 }
 
 var conf *oauth2.Config
 
 // TODO: Read the secret from environment (use securecookie.GenerateRandomKey())
-var store = sessions.NewCookieStore([]byte("secret"))
+var cookieStore sessions.Store
+
 
 // Credentials which stores google ids.
 type Credentials struct {
@@ -67,7 +70,9 @@ func checkEnv() {
 
 func init() {
 	checkEnv()
-	credsPath := os.Getenv("CLIENT_SECRETS_PATH")
+
+	// Set up OAuth parameters
+	credsPath := os.Getenv(secretsPathEnv)
 
 	var cred Credentials
 	file, err := ioutil.ReadFile(credsPath)
@@ -85,10 +90,18 @@ func init() {
 		ClientSecret: cred.Web.ClientSecret,
 		RedirectURL:  oauthCallbackUrl,
 		Scopes: []string{
-			"https://www.googleapis.com/auth/userinfo.email",
+			plus.UserinfoProfileScope,
 		},
 		Endpoint: google.Endpoint,
 	}
+
+	// Set up Cookie store with secret
+	encoded := os.Getenv(cookieSecretEnv)
+	secret, err := hex.DecodeString(encoded)
+	if err != nil {
+		exitWithError(err)
+	}
+	cookieStore = sessions.NewCookieStore(secret)
 }
 
 func logHandler(msg string) (func(w http.ResponseWriter, r *http.Request)) {
@@ -99,10 +112,36 @@ func logHandler(msg string) (func(w http.ResponseWriter, r *http.Request)) {
 }
 
 
+// http://blog.golang.org/error-handling-and-go
+type appHandler func(http.ResponseWriter, *http.Request) *appError
+
+type appError struct {
+	Error   error
+	Message string
+	Code    int
+}
+
+func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if e := fn(w, r); e != nil { // e is *appError, not os.Error.
+		log.Printf("Handler error: status code: %d, message: %s, underlying err: %#v",
+			e.Code, e.Message, e.Error)
+
+		http.Error(w, e.Message, e.Code)
+	}
+}
+
+func appErrorf(err error, format string, v ...interface{}) *appError {
+	return &appError{
+		Error:   err,
+		Message: fmt.Sprintf(format, v...),
+		Code:    500,
+	}
+}
+
 
 func main() {
 	http.HandleFunc("/", logHandler("hello") )
-	http.HandleFunc("/oauth2callback", logHandler("oauth2callback") )
-	http.HandleFunc("/login", login)
+	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
+	http.Handle("/login", appHandler(loginHandler))
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }
