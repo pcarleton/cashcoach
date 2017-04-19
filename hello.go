@@ -192,9 +192,14 @@ func meHandler(w http.ResponseWriter, r *http.Request) *appError {
 	return nil
 }
 
+func entryPointHandler(w http.ResponseWriter, r *http.Request) *appError {
+	http.ServeFile(w, r, "app.html")
+	return nil
+}
+
 func main() {
 	http.Handle("/", appHandler(logHandler("<a href='login?redirect=restricted'>Login</a>")))
-	http.Handle("/restricted", restricted(logHandler("hello")))
+	http.Handle("/app", restricted(entryPointHandler))
 	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
 	http.Handle("/login", appHandler(loginHandler))
 	http.Handle("/logout", appHandler(logoutHandler))
