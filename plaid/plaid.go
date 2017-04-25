@@ -1,4 +1,4 @@
-package main
+package plaid
 
 import (
 	"net/http"
@@ -12,45 +12,8 @@ import (
 )
 
 const (
-	devURL = "https://development.plaid.com"
+	DevURL = "https://development.plaid.com"
 )
-
-func main() {
-	viper.BindEnv("client_id")
-	viper.BindEnv("client_secret")
-	viper.BindEnv("access_token")
-
-	client := Client{
-		baseURL:devURL,
-		client: new(http.Client),
-		clientID: viper.GetString("client_id"),
-		secret: viper.GetString("client_secret"),
-	}
-
-	accessToken := viper.GetString("access_token")
-
-	//updateToken(accessToken, client)
-	resp, err := client.Transactions(accessToken,
-		"2017-04-01", "2017-04-07")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("Resp: %+v", resp)
-}
-
-func updateToken(accessToken string, client Client) {
-	resp, err := client.UpdateAccessToken(accessToken)
-
-	if err != nil {
-		log.Fatalf("Error upgrading token: %v", err)
-	}
-
-	fmt.Printf("New token: %v", resp.AccessToken)
-
-	os.Setenv("access_token", resp.AccessToken)
-}
 
 
 type Client struct {
@@ -60,20 +23,14 @@ type Client struct {
 	secret string
 }
 
-//type ClientInfo struct {
-//	ClientID string`json:"client_id"`
-//	Secret string`json:"secret"`
-//}
-//
-//type AccountToken struct {
-//	AccessToken string`json:"access_token"`
-//}
-//
-//type StringDateRange struct {
-//	StartDate string`json:"start_date"`
-//	EndDate string `json:"end_date"`
-//}
-
+func NewClient(clientID, secret, baseURL string) Client {
+	return Client{
+		baseURL: baseURL,
+		client: new(http.Client),
+		clientID: clientID,
+		secret: secret,
+	}
+}
 
 type UpdateAccessTokenRequest struct {
 	ClientID string`json:"client_id"`

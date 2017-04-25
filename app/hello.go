@@ -1,23 +1,22 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"fmt"
-	"encoding/json"
 	"net/url"
 )
 
 var config *Config
 
-func logHandler(msg string) (func(w http.ResponseWriter, r *http.Request) *appError) {
+func logHandler(msg string) func(w http.ResponseWriter, r *http.Request) *appError {
 	return func(w http.ResponseWriter, r *http.Request) *appError {
 		log.Printf("request from %v\n", r.RemoteAddr)
 		w.Write([]byte(msg))
 		return nil
 	}
 }
-
 
 // http://blog.golang.org/error-handling-and-go
 type appHandler func(http.ResponseWriter, *http.Request) *appError
@@ -77,13 +76,12 @@ func appErrorf(err error, format string, v ...interface{}) *appError {
 }
 
 type MeMsg struct {
-	Name string`json:"name"`
+	Name string `json:"name"`
 }
 
 type ErrorMsg struct {
-	Error string`json:"error"`
+	Error string `json:"error"`
 }
-
 
 type authorizedHandler func(*Profile, http.ResponseWriter, *http.Request) *appError
 
@@ -113,6 +111,20 @@ func meHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appErr
 	return respondJson(w, profile)
 }
 
+type Storage interface {
+	GetItems(string) map[string]string
+}
+
+type FakeStorage struct{}
+
+func (FakeStorage) GetItems(email string) map[string]string {
+	return make(map[string]string)
+}
+
+func banksHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appError {
+	return respondJson(w, config.GetItems(profile.DisplayName))
+}
+
 func entryPointHandler(w http.ResponseWriter, r *http.Request) *appError {
 	http.ServeFile(w, r, "app/app.html")
 	return nil
@@ -134,6 +146,7 @@ func main() {
 	http.Handle("/login", appHandler(loginHandler))
 	http.Handle("/logout", appHandler(logoutHandler))
 	http.Handle("/me", appHandler(handleAuth(meHandler)))
+	http.Handle("/banks", appHandler(handleAuth(banksHandler)))
 
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }

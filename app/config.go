@@ -21,11 +21,12 @@ func parseConfig() (*viper.Viper, error) {
 type Config struct {
 	OAuthConfig *oauth2.Config
 	SessionStore sessions.Store
+	Storage
 }
 
 func makeConfig(v *viper.Viper) (*Config, error) {
 	// TODO: Consider passing this in
-	scopes := []string{plus.UserinfoProfileScope}
+	scopes := []string{plus.UserinfoProfileScope, plus.UserinfoEmailScope}
 
 	oauthConf := &oauth2.Config{
 		ClientID:     v.GetString("client_id"),
@@ -41,5 +42,5 @@ func makeConfig(v *viper.Viper) (*Config, error) {
 	}
 	sessionStore := sessions.NewCookieStore(secret)
 
-	return &Config{oauthConf, sessionStore}, nil
+	return &Config{oauthConf, sessionStore, FakeStorage{}}, nil
 }

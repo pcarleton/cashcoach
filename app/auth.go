@@ -1,14 +1,14 @@
 package main
 
 import (
-	"net/url"
-	"errors"
-	"net/http"
-	"github.com/satori/go.uuid"
-	"golang.org/x/oauth2"
-	"golang.org/x/net/context"
-	"google.golang.org/api/plus/v1"
 	"encoding/gob"
+	"errors"
+	"github.com/satori/go.uuid"
+	"golang.org/x/net/context"
+	"golang.org/x/oauth2"
+	"google.golang.org/api/plus/v1"
+	"net/http"
+	"net/url"
 )
 
 const (
@@ -25,7 +25,7 @@ func init() {
 }
 
 type Profile struct {
-	ID, DisplayName, ImageURL string
+	ID, Email, DisplayName, ImageURL string
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) *appError {
@@ -48,7 +48,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) *appError {
 	}
 	oauthFlowSession.Options.MaxAge = 10 * 60 // 10 minutes
 
-
 	oauthFlowSession.Values[oauthFlowRedirectKey] = redirectURL
 
 	if err := oauthFlowSession.Save(r, w); err != nil {
@@ -58,8 +57,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) *appError {
 	// Use the session ID for the "state" parameter.
 	// This protects against CSRF (cross-site request forgery).
 	// See https://godoc.org/golang.org/x/oauth2#Config.AuthCodeURL for more detail.
-	authUrl := config.OAuthConfig.AuthCodeURL(sessionID, oauth2.ApprovalForce,
-		oauth2.AccessTypeOnline)
+	authUrl := config.OAuthConfig.AuthCodeURL(sessionID, oauth2.AccessTypeOnline, oauth2.ApprovalForce)
 	http.Redirect(w, r, authUrl, http.StatusFound)
 
 	return nil
@@ -84,7 +82,6 @@ func validateRedirectURL(path string) (string, error) {
 	}
 	return path, nil
 }
-
 
 // oauthCallbackHandler completes the OAuth flow, retreives the user's profile
 // information and stores it in a session.
@@ -126,7 +123,6 @@ func oauthCallbackHandler(w http.ResponseWriter, r *http.Request) *appError {
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 	return nil
 }
-
 
 // fetchProfile retrieves the Google+ profile of the user associated with the
 // provided OAuth token.
@@ -175,11 +171,11 @@ func profileFromSession(r *http.Request) *Profile {
 	return profile
 }
 
-
 // stripProfile returns a subset of a plus.Person.
 func stripProfile(p *plus.Person) *Profile {
 	return &Profile{
 		ID:          p.Id,
+		Email:       p.Emails[0].Value,
 		DisplayName: p.DisplayName,
 		ImageURL:    p.Image.Url,
 	}
