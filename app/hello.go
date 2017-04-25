@@ -76,18 +76,30 @@ func appErrorf(err error, format string, v ...interface{}) *appError {
 	}
 }
 
+type MeMsg struct {
+	Name string`json:"name"`
+}
 
-func meHandler(w http.ResponseWriter, r *http.Request) *appError {
-	profile := profileFromSession(r)
+type ErrorMsg struct {
+	Error string`json:"error"`
+}
 
-	var js []byte
-	var err error
-	if profile == nil {
-		js, err = json.Marshal(map[string]string{"error": "Unauthenticated"})
-	} else {
-		js, err = json.Marshal(map[string]string{"name": profile.DisplayName})
+
+type authorizedHandler func(*Profile, http.ResponseWriter, *http.Request) *appError
+
+func handleAuth(handler authorizedHandler) appHandler {
+	return func(w http.ResponseWriter, r *http.Request) *appError {
+		profile := profileFromSession(r)
+		if profile == nil {
+			http.Error(w, "Not authorized", http.StatusUnauthorized)
+			return nil
+		}
+		return handler(profile, w, r)
 	}
+}
 
+func respondJson(w http.ResponseWriter, v interface{}) *appError {
+	js, err := json.Marshal(v)
 	if err != nil {
 		return appErrorf(err, "Problem marshaling JS")
 	}
@@ -95,6 +107,10 @@ func meHandler(w http.ResponseWriter, r *http.Request) *appError {
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(js)
 	return nil
+}
+
+func meHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appError {
+	return respondJson(w, profile)
 }
 
 func entryPointHandler(w http.ResponseWriter, r *http.Request) *appError {
@@ -117,7 +133,7 @@ func main() {
 	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
 	http.Handle("/login", appHandler(loginHandler))
 	http.Handle("/logout", appHandler(logoutHandler))
-	http.Handle("/me", appHandler(meHandler))
+	http.Handle("/me", appHandler(handleAuth(meHandler)))
 
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }
