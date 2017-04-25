@@ -28,12 +28,16 @@ func main() {
 	}
 
 	accessToken := viper.GetString("access_token")
-	client.Transactions(accessToken,
+
+	//updateToken(accessToken, client)
+	resp, err := client.Transactions(accessToken,
 		"2017-04-01", "2017-04-07")
 
+	if err != nil {
+		log.Fatal(err)
+	}
 
-
-
+	log.Printf("Resp: %+v", resp)
 }
 
 func updateToken(accessToken string, client Client) {
@@ -43,7 +47,7 @@ func updateToken(accessToken string, client Client) {
 		log.Fatalf("Error upgrading token: %v", err)
 	}
 
-	fmt.Printf("New token: %s", resp.AccessToken)
+	fmt.Printf("New token: %v", resp.AccessToken)
 
 	os.Setenv("access_token", resp.AccessToken)
 }
@@ -74,7 +78,7 @@ type Client struct {
 type UpdateAccessTokenRequest struct {
 	ClientID string`json:"client_id"`
 	Secret string`json:"secret"`
-	AccessToken string`json:"access_token"`
+	AccessToken string`json:"access_token_v1"`
 }
 
 type UpdateAccessTokenResponse struct {
@@ -88,41 +92,50 @@ func (c *Client) UpdateAccessToken(accessToken string) (UpdateAccessTokenRespons
 	req := UpdateAccessTokenRequest{c.clientID, c.secret, accessToken}
 
 	resp := UpdateAccessTokenResponse{}
-	rawResp, err := c.post(endpoint, req)
+	err := c.post(endpoint, req, resp)
 
 	if err != nil {
-		return resp, err
-	}
-
-	if err := json.Unmarshal(rawResp, &resp); err != nil {
 		return resp, err
 	}
 
 	return resp, nil
 }
 
-func (c *Client) post(endpoint string, v interface{}) ([]byte, error) {
+func (c *Client) post(endpoint string, req interface{}, resp interface{}) error {
 
-	jsonText, err := json.Marshal(v)
+	jsonText, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	target := c.baseURL + endpoint
 
-	resp, err := c.client.Post(target, "application/json",
+	log.Printf("Requesting %s", target)
+
+	log.Printf("Request: %s", jsonText)
+
+	postResp, err := c.client.Post(target, "application/json",
 		bytes.NewReader(jsonText))
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	respBody, err := ioutil.ReadAll(resp.Body)
+
+	respBody, err := ioutil.ReadAll(postResp.Body)
+
+	log.Printf("Response: %s", respBody)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return respBody, nil
+	if err := json.Unmarshal(respBody, resp); err != nil {
+		return err
+	}
+
+	log.Printf("Unmarshalled: %+v", resp)
+
+	return nil
 
 }
 
@@ -136,6 +149,48 @@ type TransactionRequest struct {
 	EndDate string `json:"end_date"`
 }
 
+type Balance struct {
+	Available 	float64`json:"available"`
+	Current	float64`json:"current"`
+	Limit float64`json:"limit"`
+}
+
+type Account struct {
+	ID string`json:"account_id"`
+	ItemID string`json:"item_id"`
+	InstitutionID string`json:"institution_id"`
+	Balances Balance`json:"balances"`
+	Name string `json:"name"`
+	Mask string `json:"mask"`
+	OfficialName string`json:"official_name"`
+	Type string`json:"type"`
+	Subtype string`json:"subtype"`
+
+}
+
+type TransactionResponse struct {
+	Accounts []Account`json:"accounts"`
+	Transactions []Transaction`json:"transactions"`
+	Item Item`json:"item"`
+	RequestID string`json:"request_id"`
+	TotalTransactions int32`json:"total_transactions"`
+}
+
+type ApiError struct {
+	Type string`json:"error_type"`
+	Code string`json:"error_code"`
+	Message string`json:"error_message"`
+	DisplayMessage string`json:"display_message"`
+}
+
+type Item struct {
+	AvailableProducts []string`json:"available_products"`
+	BilledProducts []string`json:"billed_products"`
+	Error ApiError`json:"error"`
+	InstitutionID string`json:"institution_id"`
+	ItemID string`json:"item_id"`
+}
+
 
 type Transaction struct {
 	ID string`json:"transaction_id"`
@@ -143,7 +198,7 @@ type Transaction struct {
 	Category []string`json:"category"`
 	CategoryID string`json:"category_id"`
 	Type string`json:"transaction_type"`
-	Amount string`json:"amount"`
+	Amount float64`json:"amount"`
 	Date string`json:"date"`
 	Pending bool`json:"pending"`
 	AccountOwner string`json:"account_owner"`
@@ -151,36 +206,22 @@ type Transaction struct {
 }
 
 
-
-func (c *Client) Transactions(accessToken, startDate, endDate string) error {
+func (c *Client) Transactions(accessToken, startDate, endDate string) (TransactionResponse, error) {
 	endpoint := "/transactions/get"
 
-	jsonText, err := json.Marshal(TransactionRequest{
+	request := TransactionRequest{
 		ClientID: c.clientID,
 		Secret: c.secret,
 		AccessToken: accessToken,
 		StartDate: startDate,
 		EndDate: endDate,
-	})
-
-	if err != nil {
-		return err
 	}
 
-	reader := bytes.NewReader(jsonText)
-
-	transUrl := c.baseURL + endpoint
-	resp, err := c.client.Post(transUrl, "application/json", reader)
-
+	resp := TransactionResponse{}
+	err := c.post(endpoint, request, &resp)
 	if err != nil {
-		return err
+		return resp, err
 	}
 
-	respBody, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Got: %s", respBody)
-	return nil
+	return resp, nil
 }
