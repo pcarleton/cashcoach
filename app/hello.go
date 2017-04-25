@@ -128,7 +128,7 @@ func main() {
 		panic(fmt.Errorf("Error setting up environment: %s", err))
 	}
 
-	http.Handle("/", appHandler(logHandler("<a href='login?redirect=restricted'>Login</a>")))
+	http.Handle("/", appHandler(logHandler("<a href='login?redirect=app'>Login</a>")))
 	http.Handle("/app", restricted(entryPointHandler))
 	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
 	http.Handle("/login", appHandler(loginHandler))
