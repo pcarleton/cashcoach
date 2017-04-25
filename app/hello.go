@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 var config *Config
@@ -112,17 +113,33 @@ func meHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appErr
 }
 
 type Storage interface {
-	GetItems(string) map[string]string
+	GetBanks(string) []string
 }
 
-type FakeStorage struct{}
-
-func (FakeStorage) GetItems(email string) map[string]string {
-	return make(map[string]string)
+type FakeStorage struct {
+	Tokens []string
 }
 
-func banksHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appError {
-	return respondJson(w, config.GetItems(profile.DisplayName))
+func (f *FakeStorage) GetBanks(email string) []string {
+	return f.Tokens
+}
+
+func transactionsHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appError {
+	banks := config.GetBanks(profile.DisplayName)
+
+	now := time.Now()
+	lastMonth := now.AddDate(0, -1, 0)
+
+	referenceTime := "2006-01-02"
+
+	transactions, err := config.Plaid.Transactions(
+		banks[0], lastMonth.Format(referenceTime), now.Format(referenceTime))
+
+	if err != nil {
+		appErrorf(err, "Error getting transactions")
+	}
+
+	return respondJson(w, transactions)
 }
 
 func entryPointHandler(w http.ResponseWriter, r *http.Request) *appError {
@@ -146,7 +163,7 @@ func main() {
 	http.Handle("/login", appHandler(loginHandler))
 	http.Handle("/logout", appHandler(logoutHandler))
 	http.Handle("/me", appHandler(handleAuth(meHandler)))
-	http.Handle("/banks", appHandler(handleAuth(banksHandler)))
+	http.Handle("/transactions", appHandler(handleAuth(transactionsHandler)))
 
 	log.Fatal(http.ListenAndServe(":5000", nil))
 }
