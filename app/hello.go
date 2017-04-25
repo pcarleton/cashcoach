@@ -10,17 +10,6 @@ import (
 
 var config *Config
 
-func init() {
-	v, err := parseConfig()
-	if err != nil {
-		panic(fmt.Errorf("Error parsing config file (%s): %s", v.ConfigFileUsed(), err))
-	}
-	config, err = makeConfig(v)
-	if err != nil {
-		panic(fmt.Errorf("Error setting up environment: %s", err))
-	}
-}
-
 func logHandler(msg string) (func(w http.ResponseWriter, r *http.Request) *appError) {
 	return func(w http.ResponseWriter, r *http.Request) *appError {
 		log.Printf("request from %v\n", r.RemoteAddr)
@@ -114,6 +103,15 @@ func entryPointHandler(w http.ResponseWriter, r *http.Request) *appError {
 }
 
 func main() {
+	v, err := parseConfig()
+	if err != nil {
+		panic(fmt.Errorf("Error parsing config file (%s): %s", v.ConfigFileUsed(), err))
+	}
+	config, err = makeConfig(v)
+	if err != nil {
+		panic(fmt.Errorf("Error setting up environment: %s", err))
+	}
+
 	http.Handle("/", appHandler(logHandler("<a href='login?redirect=restricted'>Login</a>")))
 	http.Handle("/app", restricted(entryPointHandler))
 	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
