@@ -3,10 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"time"
+
+	"github.com/pcarleton/hello/auth"
 )
 
 var config *Config
@@ -147,6 +150,30 @@ func entryPointHandler(w http.ResponseWriter, r *http.Request) *appError {
 	return nil
 }
 
+type JwtRequest struct {
+	IDToken string `json:"idtoken"`
+}
+
+func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
+	req := new(JwtRequest)
+
+	reqBody, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		return appErrorf(err, "bad req")
+	}
+
+	err = json.Unmarshal(reqBody, &req)
+
+	token, err := auth.VerifyGoogleJwt(req.IDToken)
+
+	if err != nil {
+		return appErrorf(err, "bad jwt")
+	}
+
+	return respondJson(w, token.Claims)
+}
+
 func main() {
 	v, err := parseConfig()
 	if err != nil {
@@ -164,6 +191,7 @@ func main() {
 	http.Handle("/logout", appHandler(logoutHandler))
 	http.Handle("/me", appHandler(handleAuth(meHandler)))
 	http.Handle("/transactions", appHandler(handleAuth(transactionsHandler)))
+	http.Handle("/jwt", appHandler(jwtHandler))
 
-	log.Fatal(http.ListenAndServe(":5000", nil))
+	log.Fatal(http.ListenAndServe(":5001", nil))
 }
