@@ -141,7 +141,7 @@ type Transaction struct {
 	Date         string   `json:"date"`
 	Pending      bool     `json:"pending"`
 	AccountOwner string   `json:"account_owner"`
-	Name         string   `json:"string"`
+	Name         string   `json:"name"`
 }
 
 func (c *Client) Transactions(accessToken, startDate, endDate string) (TransactionResponse, error) {

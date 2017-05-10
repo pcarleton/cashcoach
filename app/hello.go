@@ -171,6 +171,16 @@ func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "bad jwt")
 	}
 
+	profile, err := profileFromJwt(token)
+	if err != nil {
+		return appErrorf(err, "couldn't create profile")
+	}
+
+	err = createSession(w, r, profile)
+	if err != nil {
+		return appErrorf(err, "couldn't create session")
+	}
+
 	return respondJson(w, token.Claims)
 }
 

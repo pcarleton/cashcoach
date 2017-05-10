@@ -3,12 +3,16 @@ package main
 import (
 	"encoding/gob"
 	"errors"
+	"net/http"
+	"net/url"
+
+	"fmt"
+
+	"github.com/dgrijalva/jwt-go"
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/plus/v1"
-	"net/http"
-	"net/url"
 )
 
 const (
@@ -25,7 +29,7 @@ func init() {
 }
 
 type Profile struct {
-	ID, Email, DisplayName, ImageURL string
+	Email, DisplayName, ImageURL string
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) *appError {
@@ -103,24 +107,34 @@ func oauthCallbackHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "could not get auth token: %v", err)
 	}
 
-	session, err := config.SessionStore.New(r, sessionName)
-	if err != nil {
-		return appErrorf(err, "could not get default session: %v", err)
-	}
-
 	person, err := fetchProfile(context.Background(), tok)
 
 	if err != nil {
 		return appErrorf(err, "could not fetch userinfo")
 	}
 
-	session.Values[oauthTokenSessionKey] = tok
-	session.Values[emailKey] = stripProfile(person)
-	if err := session.Save(r, w); err != nil {
-		return appErrorf(err, "could not save session: %v", err)
+	profile := stripProfile(person)
+
+	err = createSession(w, r, profile)
+	if err != nil {
+		appErrorf(err, "could not create session: %v", err)
 	}
 
 	http.Redirect(w, r, redirectURL, http.StatusFound)
+	return nil
+}
+
+func createSession(w http.ResponseWriter, r *http.Request, profile *Profile) error {
+	session, err := config.SessionStore.New(r, sessionName)
+	if err != nil {
+		return err
+	}
+
+	session.Values[emailKey] = profile
+	if err := session.Save(r, w); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -160,10 +174,11 @@ func profileFromSession(r *http.Request) *Profile {
 	if err != nil {
 		return nil
 	}
-	tok, ok := session.Values[oauthTokenSessionKey].(*oauth2.Token)
-	if !ok || !tok.Valid() {
-		return nil
-	}
+	// TODO: Should I check something here?
+	//tok, ok := session.Values[oauthTokenSessionKey].(*oauth2.Token)
+	//if !ok || !tok.Valid() {
+	//	return nil
+	//}
 	profile, ok := session.Values[emailKey].(*Profile)
 	if !ok {
 		return nil
@@ -171,10 +186,32 @@ func profileFromSession(r *http.Request) *Profile {
 	return profile
 }
 
+func profileFromJwt(token *jwt.Token) (*Profile, error) {
+	claims, ok := token.Claims.(jwt.MapClaims)
+
+	if !ok {
+		return nil, fmt.Errorf("Invalid JWT claims: %+v", token.Claims)
+	}
+
+	email, ok := claims["email"].(string)
+	name, ok := claims["name"].(string)
+	image, ok := claims["picture"].(string)
+
+	if !ok {
+		return nil, fmt.Errorf("Invalid JWT claims: %+v", token.Claims)
+	}
+
+	return &Profile{
+		Email:       email,
+		DisplayName: name,
+		ImageURL:    image,
+	}, nil
+
+}
+
 // stripProfile returns a subset of a plus.Person.
 func stripProfile(p *plus.Person) *Profile {
 	return &Profile{
-		ID:          p.Id,
 		Email:       p.Emails[0].Value,
 		DisplayName: p.DisplayName,
 		ImageURL:    p.Image.Url,

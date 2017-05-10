@@ -55,7 +55,7 @@ func getGoogleCerts() (map[string]*rsa.PublicKey, error) {
 func VerifyToken(tokenString string, certs map[string]*rsa.PublicKey) (*jwt.Token, error) {
 
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		//// Don't forget to validate the alg is what you expect:
+		// Only accept RSA signed JWT's
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); !ok {
 			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 		}
@@ -68,6 +68,11 @@ func VerifyToken(tokenString string, certs map[string]*rsa.PublicKey) (*jwt.Toke
 	if err != nil {
 		return nil, err
 	}
+
+	if !token.Valid {
+		return nil, fmt.Errorf("Invalid token: %v", token)
+	}
+
 	return token, nil
 }
 
