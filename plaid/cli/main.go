@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/pcarleton/hello/plaid"
+	"github.com/pcarleton/cashcoach/plaid"
 )
 
 func main() {

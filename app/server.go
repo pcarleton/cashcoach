@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/pcarleton/hello/auth"
+	"github.com/pcarleton/cashcoach/auth"
 )
 
 var config *Config

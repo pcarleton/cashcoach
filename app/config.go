@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 
 	"github.com/gorilla/sessions"
-	"github.com/pcarleton/hello/plaid"
+	"github.com/pcarleton/cashcoach/plaid"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
