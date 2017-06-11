@@ -1,0 +1,10 @@
+version: '2'
+services:
+  backend:
+    build: app/.
+    ports:
+      - "5001:5001"
+  frontend:
+    build: frontend/.
+    ports:
+      - "5000:5000"
