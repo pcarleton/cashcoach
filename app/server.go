@@ -139,7 +139,7 @@ func transactionsHandler(profile *Profile, w http.ResponseWriter, r *http.Reques
 		banks[0], lastMonth.Format(referenceTime), now.Format(referenceTime))
 
 	if err != nil {
-		appErrorf(err, "Error getting transactions")
+		return appErrorf(err, "Error getting transactions")
 	}
 
 	return respondJson(w, transactions)
