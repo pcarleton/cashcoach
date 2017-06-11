@@ -57,7 +57,7 @@ func makeConfig(v *viper.Viper) (*Config, error) {
 		v.GetString("plaid.client_secret"),
 		plaid.DevURL)
 
-	storage := FakeStorage{[]string{v.GetString("access_token")}}
+	storage := FakeStorage{[]string{v.GetString("plaid.access_token")}}
 
 	return &Config{oauthConf, sessionStore, &storage, plaidClient}, nil
 }
