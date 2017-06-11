@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/hex"
+	"time"
 
 	"github.com/gorilla/sessions"
 	"github.com/pcarleton/cashcoach/plaid"
@@ -46,6 +47,10 @@ func makeConfig(v *viper.Viper) (*Config, error) {
 		return nil, err
 	}
 	sessionStore := sessions.NewCookieStore(secret)
+	sessionStore.Options = &sessions.Options{
+		Path:   "/",
+		MaxAge: int((time.Hour * 3).Seconds()),
+	}
 
 	plaidClient := plaid.NewClient(
 		v.GetString("plaid.client_id"),
