@@ -199,9 +199,10 @@ func main() {
 	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
 	http.Handle("/login", appHandler(loginHandler))
 	http.Handle("/logout", appHandler(logoutHandler))
-	http.Handle("/me", appHandler(handleAuth(meHandler)))
-	http.Handle("/transactions", appHandler(handleAuth(transactionsHandler)))
-	http.Handle("/jwt", appHandler(jwtHandler))
+    // TODO: Delete all the other handlers?
+	http.Handle("/api/me", appHandler(handleAuth(meHandler)))
+	http.Handle("/api/transactions", appHandler(handleAuth(transactionsHandler)))
+	http.Handle("/api/jwt", appHandler(jwtHandler))
 
 	log.Fatal(http.ListenAndServe(":5001", nil))
 }

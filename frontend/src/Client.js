@@ -1,5 +1,5 @@
 function transactions(cb) {
-  return fetch(`transactions`, {
+  return fetch(`api/transactions`, {
     accept: 'application/json',
     credentials: "same-origin"
   }).then(checkStatus)
@@ -9,7 +9,7 @@ function transactions(cb) {
 
 
 function verify(cb, idToken) {
-  return fetch(`jwt`,
+  return fetch(`api/jwt`,
     {
         method: 'post',
         headers: {
