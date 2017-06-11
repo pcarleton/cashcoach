@@ -10,14 +10,14 @@ import (
 )
 
 func main() {
-	viper.BindEnv("client_id")
-	viper.BindEnv("client_secret")
-	viper.BindEnv("access_token")
+	viper.BindEnv("CLIENT_ID")
+	viper.BindEnv("CLIENT_SECRET")
+	viper.BindEnv("ACCESS_TOKEN")
 
 
 	client := plaid.NewClient(
 		viper.GetString("client_id"),
-		viper.GetString("secret"),
+		viper.GetString("client_secret"),
 		plaid.DevURL)
 
 	accessToken := viper.GetString("access_token")
@@ -26,7 +26,7 @@ func main() {
 }
 
 func listTransactions(accessToken string, client plaid.Client) {
-	//updateToken(accessToken, client)
+	accessToken = updateToken(accessToken, client)
 	resp, err := client.Transactions(accessToken,
 		"2017-04-01", "2017-04-07")
 
@@ -37,7 +37,7 @@ func listTransactions(accessToken string, client plaid.Client) {
 	log.Printf("Resp: %+v", resp)
 }
 
-func updateToken(accessToken string, client plaid.Client) {
+func updateToken(accessToken string, client plaid.Client) string {
 	resp, err := client.UpdateAccessToken(accessToken)
 
 	if err != nil {
@@ -47,4 +47,5 @@ func updateToken(accessToken string, client plaid.Client) {
 	fmt.Printf("New token: %v", resp.AccessToken)
 
 	os.Setenv("access_token", resp.AccessToken)
+  return resp.AccessToken
 }

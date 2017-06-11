@@ -44,7 +44,7 @@ func (c *Client) UpdateAccessToken(accessToken string) (UpdateAccessTokenRespons
 	req := UpdateAccessTokenRequest{c.clientID, c.secret, accessToken}
 
 	resp := UpdateAccessTokenResponse{}
-	err := c.post(endpoint, req, resp)
+	err := c.post(endpoint, req, &resp)
 
 	if err != nil {
 		return resp, err
