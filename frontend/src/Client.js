@@ -16,7 +16,8 @@ function verify(cb, idToken) {
           "Content-type": "application/json"
         },
         body: JSON.stringify({"idtoken": idToken}),
-        accept: 'application/json'
+        accept: 'application/json',
+        credentials: "same-origin"
       }
 ).then(checkStatus)
  .then(parseJSON)
