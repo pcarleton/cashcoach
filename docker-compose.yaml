@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 services:
   backend:
     build: .
@@ -6,3 +6,8 @@ services:
     build: frontend/.
     ports:
       - "5000:80"
+  db:
+    image: mongo
+    volumes:
+        - ${HOME}/data/db:/data/db
+
