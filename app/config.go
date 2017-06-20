@@ -10,6 +10,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/plus/v1"
+	"gopkg.in/mgo.v2"
 )
 
 func parseConfig() (*viper.Viper, error) {
@@ -57,7 +58,13 @@ func makeConfig(v *viper.Viper) (*Config, error) {
 		v.GetString("plaid.client_secret"),
 		plaid.DevURL)
 
-	storage := FakeStorage{[]string{v.GetString("plaid.access_token")}}
+	//storage := FakeStorage{[]string{v.GetString("plaid.access_token")}}
+	session, err := mgo.Dial("localhost")
+
+	if err != nil {
+		return nil, err
+	}
+	storage := MongoStorage{session}
 
 	return &Config{oauthConf, sessionStore, &storage, plaidClient}, nil
 }

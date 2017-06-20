@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/pcarleton/cashcoach/auth"
-  "gopkg.in/mgo.v2"
-  "gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 var config *Config
@@ -118,19 +118,44 @@ func meHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appErr
 }
 
 type Storage interface {
-	GetBanks(string) []string
+	GetPerson(string) (*Person, error)
 }
 
 type FakeStorage struct {
 	Tokens []string
 }
 
-func (f *FakeStorage) GetBanks(email string) []string {
-	return f.Tokens
+func (f *FakeStorage) GetPerson(email string) (*Person, error) {
+	p := &Person{
+		Email: email,
+		Banks: []Bank{Bank{"bank1", f.Tokens[0]}},
+	}
+	return p, nil
+}
+
+type MongoStorage struct {
+	Session *mgo.Session
+}
+
+func (s *MongoStorage) GetPerson(email string) (*Person, error) {
+	c := s.Session.DB("test").C("people")
+
+	result := new(Person)
+	err := c.Find(bson.M{"name": email}).One(result)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
 
 func transactionsHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appError {
-	banks := config.GetBanks(profile.DisplayName)
+	person, err := config.GetPerson(profile.DisplayName)
+
+	if err != nil {
+		return appErrorf(err, "Error loading bank info from database.")
+	}
 
 	now := time.Now()
 	lastMonth := now.AddDate(0, -1, 0)
@@ -138,7 +163,7 @@ func transactionsHandler(profile *Profile, w http.ResponseWriter, r *http.Reques
 	referenceTime := "2006-01-02"
 
 	transactions, err := config.Plaid.Transactions(
-		banks[0], lastMonth.Format(referenceTime), now.Format(referenceTime))
+		person.Banks[0].Token, lastMonth.Format(referenceTime), now.Format(referenceTime))
 
 	if err != nil {
 		return appErrorf(err, "Error getting transactions")
@@ -186,34 +211,24 @@ func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
 	return respondJson(w, token.Claims)
 }
 
-type Person struct {
-        Name string
-        Phone string
+type Bank struct {
+	Name  string
+	Token string
 }
 
+type Person struct {
+	Email string
+	Banks []Bank
+}
 
 func dummyMongoHandler(w http.ResponseWriter, r *http.Request) *appError {
-  session, err := mgo.Dial("localhost")
+	result, err := config.GetPerson("Ale")
 
-  if err != nil {
-    return appErrorf(err, "couldn't dial mongo")
-  }
-  defer session.Close()
-	c := session.DB("test").C("people")
-
-	err = c.Insert(&Person{"Ale", "+55 53 8116 9639"})
-	
 	if err != nil {
-		return appErrorf(err, "couldn't insert")
+		return appErrorf(err, "couldn't find")
 	}
 
-	result := Person{}
-	err = c.Find(bson.M{"name": "Ale"}).One(&result)
-	if err != nil {
-    return appErrorf(err, "couldn't find")
-	}
-
-  return respondJson(w, result)
+	return respondJson(w, result)
 }
 
 func main() {
@@ -231,7 +246,7 @@ func main() {
 	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
 	http.Handle("/login", appHandler(loginHandler))
 	http.Handle("/logout", appHandler(logoutHandler))
-    // TODO: Delete all the other handlers?
+	// TODO: Delete all the other handlers?
 	http.Handle("/api/me", appHandler(handleAuth(meHandler)))
 	http.Handle("/api/transactions", appHandler(handleAuth(transactionsHandler)))
 	http.Handle("/api/jwt", appHandler(jwtHandler))
