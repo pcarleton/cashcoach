@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/pcarleton/cashcoach/auth"
+  "gopkg.in/mgo.v2"
+  "gopkg.in/mgo.v2/bson"
 )
 
 var config *Config
@@ -184,6 +186,36 @@ func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
 	return respondJson(w, token.Claims)
 }
 
+type Person struct {
+        Name string
+        Phone string
+}
+
+
+func dummyMongoHandler(w http.ResponseWriter, r *http.Request) *appError {
+  session, err := mgo.Dial("localhost")
+
+  if err != nil {
+    return appErrorf(err, "couldn't dial mongo")
+  }
+  defer session.Close()
+	c := session.DB("test").C("people")
+
+	err = c.Insert(&Person{"Ale", "+55 53 8116 9639"})
+	
+	if err != nil {
+		return appErrorf(err, "couldn't insert")
+	}
+
+	result := Person{}
+	err = c.Find(bson.M{"name": "Ale"}).One(&result)
+	if err != nil {
+    return appErrorf(err, "couldn't find")
+	}
+
+  return respondJson(w, result)
+}
+
 func main() {
 	v, err := parseConfig()
 	if err != nil {
@@ -203,6 +235,7 @@ func main() {
 	http.Handle("/api/me", appHandler(handleAuth(meHandler)))
 	http.Handle("/api/transactions", appHandler(handleAuth(transactionsHandler)))
 	http.Handle("/api/jwt", appHandler(jwtHandler))
+	http.Handle("/api/mongo", appHandler(dummyMongoHandler))
 
 	log.Fatal(http.ListenAndServe(":5001", nil))
 }

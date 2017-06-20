@@ -2,6 +2,8 @@ version: '3'
 services:
   backend:
     build: .
+    ports:
+      - "5001:5001"
   frontend:
     build: frontend/.
     ports:
@@ -10,4 +12,5 @@ services:
     image: mongo
     volumes:
         - ${HOME}/data/db:/data/db
-
+    ports:
+      - "27017:27017"
