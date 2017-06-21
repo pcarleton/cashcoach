@@ -2,12 +2,12 @@
 FROM golang
 
 ADD . /go/src/github.com/pcarleton/cashcoach
-ADD ./app/config.json /go/config.json
+ADD ./api/config.json /go/config.json
 
 RUN go get github.com/pcarleton/cashcoach/...
 
-RUN go install github.com/pcarleton/cashcoach/app
+RUN go install github.com/pcarleton/cashcoach/api
 
-ENTRYPOINT /go/bin/app
+ENTRYPOINT /go/bin/api
 
 EXPOSE 5001
