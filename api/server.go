@@ -8,9 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/pcarleton/cashcoach/auth"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"github.com/pcarleton/cashcoach/api/auth"
 )
 
 var config *Config
@@ -57,11 +55,11 @@ type ErrorMsg struct {
 	Error string `json:"error"`
 }
 
-type authorizedHandler func(*Profile, http.ResponseWriter, *http.Request) *appError
+type authorizedHandler func(*auth.Profile, http.ResponseWriter, *http.Request) *appError
 
 func handleAuth(handler authorizedHandler) appHandler {
 	return func(w http.ResponseWriter, r *http.Request) *appError {
-		profile := profileFromSession(r)
+		profile := config.Sessions.ProfileFromSession(r)
 		if profile == nil {
 			http.Error(w, "Not authorized", http.StatusUnauthorized)
 			return nil
@@ -81,44 +79,11 @@ func respondJson(w http.ResponseWriter, v interface{}) *appError {
 	return nil
 }
 
-func meHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appError {
+func meHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *appError {
 	return respondJson(w, profile)
 }
 
-type Storage interface {
-	GetPerson(string) (*Person, error)
-}
-
-type FakeStorage struct {
-	Tokens []string
-}
-
-func (f *FakeStorage) GetPerson(email string) (*Person, error) {
-	p := &Person{
-		Email: email,
-		Banks: []Bank{Bank{"bank1", f.Tokens[0]}},
-	}
-	return p, nil
-}
-
-type MongoStorage struct {
-	Session *mgo.Session
-}
-
-func (s *MongoStorage) GetPerson(email string) (*Person, error) {
-	c := s.Session.DB("test").C("people")
-
-	result := new(Person)
-	err := c.Find(bson.M{"name": email}).One(result)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return result, nil
-}
-
-func transactionsHandler(profile *Profile, w http.ResponseWriter, r *http.Request) *appError {
+func transactionsHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *appError {
 	person, err := config.GetPerson(profile.DisplayName)
 
 	if err != nil {
@@ -161,27 +126,17 @@ func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "bad jwt")
 	}
 
-	profile, err := profileFromJwt(token)
+	profile, err := auth.ProfileFromJwt(token)
 	if err != nil {
 		return appErrorf(err, "couldn't create profile")
 	}
 
-	err = createSession(w, r, profile)
+	err = config.Sessions.CreateSession(w, r, profile)
 	if err != nil {
 		return appErrorf(err, "couldn't create session")
 	}
 
 	return respondJson(w, token.Claims)
-}
-
-type Bank struct {
-	Name  string
-	Token string
-}
-
-type Person struct {
-	Email string
-	Banks []Bank
 }
 
 func dummyMongoHandler(w http.ResponseWriter, r *http.Request) *appError {

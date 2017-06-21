@@ -1,11 +1,9 @@
 package main
 
 import (
-	"encoding/hex"
-	"time"
-
-	"github.com/gorilla/sessions"
-	"github.com/pcarleton/cashcoach/plaid"
+	"github.com/pcarleton/cashcoach/api/auth"
+	"github.com/pcarleton/cashcoach/api/plaid"
+	"github.com/pcarleton/cashcoach/api/storage"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -24,22 +22,22 @@ func parseConfig() (*viper.Viper, error) {
 
 type Config struct {
 	OAuthConfig  *oauth2.Config
-	SessionStore sessions.Store
-	Storage
+	Sessions     *auth.SessionHandler
+	storage.Storage
 	Plaid plaid.Client
 }
 
-func getFakeStorage(v *viper.Viper) Storage {
-	return &FakeStorage{[]string{v.GetString("plaid.access_token")}}
+func getFakeStorage(v *viper.Viper) storage.Storage {
+	return &storage.FakeStorage{[]string{v.GetString("plaid.access_token")}}
 }
 
-func getMongoStorage(v *viper.Viper) (Storage, error) {
+func getMongoStorage(v *viper.Viper) (storage.Storage, error) {
 	session, err := mgo.Dial(v.GetString("mongo.host"))
 
 	if err != nil {
 		return nil, err
 	}
-	storage := &MongoStorage{session}
+	storage := &storage.MongoStorage{session}
 
 	return storage, nil
 }
@@ -56,20 +54,16 @@ func makeConfig(v *viper.Viper) (*Config, error) {
 		Endpoint:     google.Endpoint,
 	}
 
-	secret, err := hex.DecodeString(v.GetString("cookie_secret"))
-	if err != nil {
-		return nil, err
-	}
-	sessionStore := sessions.NewCookieStore(secret)
-	sessionStore.Options = &sessions.Options{
-		Path:   "/",
-		MaxAge: int((time.Hour * 3).Seconds()),
-	}
-
 	plaidClient := plaid.NewClient(
 		v.GetString("plaid.client_id"),
 		v.GetString("plaid.client_secret"),
 		plaid.DevURL)
+
+	sessionHandler, err := auth.CreateSessionHandler(v.GetString("cookie_secret"))
+
+	if err != nil {
+		return nil, err
+	}
 
 	storage, err := getMongoStorage(v)
 
@@ -77,5 +71,5 @@ func makeConfig(v *viper.Viper) (*Config, error) {
 		return nil, err
 	}
 
-	return &Config{oauthConf, sessionStore, storage, plaidClient}, nil
+	return &Config{oauthConf, sessionHandler, storage, plaidClient}, nil
 }
