@@ -19,8 +19,6 @@ func parseConfig() (*viper.Viper, error) {
 	v.AddConfigPath("$HOME/.cashcoach") // call multiple times to add many search paths
 	v.AddConfigPath(".")                // optionally look for config in the working directory
 
-	// TODO: Store this somewhere
-	v.BindEnv("access_token")
 	return v, v.ReadInConfig()
 }
 
@@ -29,6 +27,21 @@ type Config struct {
 	SessionStore sessions.Store
 	Storage
 	Plaid plaid.Client
+}
+
+func getFakeStorage(v *viper.Viper) Storage {
+	return &FakeStorage{[]string{v.GetString("plaid.access_token")}}
+}
+
+func getMongoStorage(v *viper.Viper) (Storage, error) {
+	session, err := mgo.Dial(v.GetString("mongo.host"))
+
+	if err != nil {
+		return nil, err
+	}
+	storage := &MongoStorage{session}
+
+	return storage, nil
 }
 
 func makeConfig(v *viper.Viper) (*Config, error) {
@@ -58,13 +71,11 @@ func makeConfig(v *viper.Viper) (*Config, error) {
 		v.GetString("plaid.client_secret"),
 		plaid.DevURL)
 
-	//storage := FakeStorage{[]string{v.GetString("plaid.access_token")}}
-	session, err := mgo.Dial("localhost")
+	storage, err := getMongoStorage(v)
 
 	if err != nil {
 		return nil, err
 	}
-	storage := MongoStorage{session}
 
-	return &Config{oauthConf, sessionStore, &storage, plaidClient}, nil
+	return &Config{oauthConf, sessionStore, storage, plaidClient}, nil
 }

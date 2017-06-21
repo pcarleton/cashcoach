@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/pcarleton/cashcoach/auth"
@@ -34,37 +33,6 @@ type appError struct {
 }
 
 func (fn appHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if e := fn(w, r); e != nil { // e is *appError, not os.Error.
-		log.Printf("Handler error: status code: %d, message: %s, underlying err: %#v",
-			e.Code, e.Message, e.Error)
-
-		http.Error(w, e.Message, e.Code)
-	}
-}
-
-type restricted func(http.ResponseWriter, *http.Request) *appError
-
-func makeLoginUrl(path string) string {
-	vals := url.Values{}
-	vals.Set("redirect", path)
-
-	return "/login?" + vals.Encode()
-}
-
-func (fn restricted) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	profile := profileFromSession(r)
-	if profile == nil {
-		loginUrl, err := validateRedirectURL(makeLoginUrl(r.URL.Path))
-
-		if err != nil {
-			log.Printf("Error redirecting to login %#v", err)
-			http.Error(w, "Problem redirecting to login", 500)
-			return
-		}
-
-		http.Redirect(w, r, loginUrl, 302)
-	}
-
 	if e := fn(w, r); e != nil { // e is *appError, not os.Error.
 		log.Printf("Handler error: status code: %d, message: %s, underlying err: %#v",
 			e.Code, e.Message, e.Error)
@@ -172,11 +140,6 @@ func transactionsHandler(profile *Profile, w http.ResponseWriter, r *http.Reques
 	return respondJson(w, transactions)
 }
 
-func entryPointHandler(w http.ResponseWriter, r *http.Request) *appError {
-	http.ServeFile(w, r, "app/app.html")
-	return nil
-}
-
 type JwtRequest struct {
 	IDToken string `json:"idtoken"`
 }
@@ -241,12 +204,6 @@ func main() {
 		panic(fmt.Errorf("Error setting up environment: %s", err))
 	}
 
-	http.Handle("/", appHandler(logHandler("<a href='login?redirect=app'>Login</a>")))
-	http.Handle("/app", restricted(entryPointHandler))
-	http.Handle("/oauth2callback", appHandler(oauthCallbackHandler))
-	http.Handle("/login", appHandler(loginHandler))
-	http.Handle("/logout", appHandler(logoutHandler))
-	// TODO: Delete all the other handlers?
 	http.Handle("/api/me", appHandler(handleAuth(meHandler)))
 	http.Handle("/api/transactions", appHandler(handleAuth(transactionsHandler)))
 	http.Handle("/api/jwt", appHandler(jwtHandler))
