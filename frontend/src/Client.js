@@ -7,6 +7,14 @@ function transactions(cb) {
     .then(cb);
 }
 
+function me(cb) {
+  return fetch(`api/me`, {
+    accept: 'application/json',
+    credentials: "same-origin"
+  }).then(checkStatus)
+    .then(parseJSON)
+    .then(cb);
+}
 
 function verify(cb, idToken) {
   return fetch(`api/jwt`,
@@ -31,8 +39,8 @@ function checkStatus(response) {
   }
   const error = new Error(`HTTP Error ${response.statusText}`);
   error.status = response.statusText;
+  error.code = response.status;
   error.response = response;
-  console.log(error); // eslint-disable-line no-console
   throw error;
 }
 
@@ -40,5 +48,5 @@ function parseJSON(response) {
   return response.json();
 }
 
-const Client = { transactions, verify };
+const Client = { transactions, verify, me };
 export default Client;

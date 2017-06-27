@@ -26,6 +26,23 @@ class App extends Component {
     Client.verify(this.login, response.tokenId)
   }
 
+  loginFromCookie() {
+      try {
+        Client.me(this.login);
+        console.log("Logged in from cookie.")
+      }
+      catch (e) {
+        if (e.code != 401) {
+          throw e;
+        }
+      }
+  }
+
+  componentDidMount() {
+    console.log("mount method");
+    this.loginFromCookie();
+  }
+
   render() {
     const loggedIn = this.state.loggedIn;
 
