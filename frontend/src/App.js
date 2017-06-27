@@ -1,6 +1,5 @@
 import React, { Component } from 'react';
-import TransactionsTable from './TransactionsTable';
-import './App.css';
+import Home from './Home';
 import GoogleLogin from 'react-google-login';
 import Client from './Client';
 
@@ -8,26 +7,35 @@ class App extends Component {
 
   constructor(props) {
     super(props);
+    this.state = {loggedIn: false, error: ""};
 
-    this.state = {transactions: []};
+    this.responseGoogle = this.responseGoogle.bind(this);
+    this.login = this.login.bind(this);
   }
 
-  responseGoogle = (response) => {
+  login(data) {
 
-    const updateTs = (tdata) => {
-        console.log(tdata);
-        this.setState({transactions: tdata.transactions})
-    }
+    console.log("Authed!")
+    console.log(data);
+    // TODO: Display some profile info
+    this.setState({loggedIn: true});
+  }
+
+  responseGoogle(response) {
     console.log(response);
-    Client.verify(function(data) {
-      console.log("Authed!")
-      console.log(data);
-      Client.transactions(updateTs);
-    }, response.tokenId)
+    Client.verify(this.login, response.tokenId)
   }
 
   render() {
-    const transactions = this.state.transactions;
+    const loggedIn = this.state.loggedIn;
+
+    if (loggedIn) {
+      return (
+      <div className="App">
+          <Home />
+          </div>
+        )
+    }
     return (
       <div className='App'>
         <div className='ui text container'>
@@ -36,8 +44,7 @@ class App extends Component {
            buttonText="Sign in with Google"
            onSuccess={this.responseGoogle}
            onFailure={this.responseGoogle}
-         />,
-          <TransactionsTable transactions={transactions}/>
+         />
         </div>
       </div>
     );

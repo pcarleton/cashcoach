@@ -141,6 +141,7 @@ func VerifyToken(tokenString string, certs map[string]*rsa.PublicKey) (*jwt.Toke
 }
 
 func VerifyGoogleJwt(tokenString string) (*jwt.Token, error) {
+  // TODO: Invalidate these certs periodically because they go stale
 	certs, err := getGoogleCerts()
 	if err != nil {
 		return nil, err
