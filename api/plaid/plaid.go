@@ -3,6 +3,7 @@ package plaid
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 )
@@ -172,8 +173,8 @@ type ExchangeRequest struct {
 
 type ExchangeResponse struct {
 	AccessToken string `json:"access_token"`
-	ItemID string `json:"item_id"`
-	Error             ApiError `json:"error"`
+	ItemID      string `json:"item_id"`
+	ApiError
 }
 
 func (c *Client) Exchange(publicToken string) (ExchangeResponse, error) {
@@ -189,6 +190,10 @@ func (c *Client) Exchange(publicToken string) (ExchangeResponse, error) {
 	err := c.post(endpoint, request, &resp)
 	if err != nil {
 		return resp, err
+	}
+
+	if resp.Message != "" {
+		return resp, fmt.Errorf(resp.Message)
 	}
 
 	return resp, nil

@@ -178,8 +178,8 @@ func accountsHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Reque
 }
 
 type AddAccountRequest struct {
-	Name        string
-	PublicToken string
+	Name        string `json:"name"`
+	PublicToken string `json:"public_token"`
 }
 
 func addAccount(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *appError {
