@@ -163,3 +163,33 @@ func (c *Client) Transactions(accessToken, startDate, endDate string) (Transacti
 
 	return resp, nil
 }
+
+type ExchangeRequest struct {
+	ClientID    string `json:"client_id"`
+	Secret      string `json:"secret"`
+	PublicToken string `json:"public_token"`
+}
+
+type ExchangeResponse struct {
+	AccessToken string `json:"access_token"`
+	ItemID string `json:"item_id"`
+	Error             ApiError `json:"error"`
+}
+
+func (c *Client) Exchange(publicToken string) (ExchangeResponse, error) {
+	endpoint := "/item/public_token/exchange"
+
+	request := ExchangeRequest{
+		ClientID:    c.clientID,
+		Secret:      c.secret,
+		PublicToken: publicToken,
+	}
+
+	resp := ExchangeResponse{}
+	err := c.post(endpoint, request, &resp)
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, nil
+}

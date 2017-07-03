@@ -8,29 +8,32 @@ import (
 )
 
 type Account struct {
-	Name  string
-	Token string
+  Name  string `json:"name"`
+  Token string `json:"token"`
 }
 
 type Person struct {
-	Email string
-	Accounts []Account
+  Email string       `bson:"email"`
+	Accounts []Account `bson:"accounts,omitempty"`
 }
 
 
 type Storage interface {
-	GetPerson(string) (*Person, error)
+	Get(string) (*Person, error)
   Exists(string) (bool, error)
 
-  // Returns true if the person was created
-  CreatePerson(string) (bool, error)
+  // Returns true if created, false if it already existed
+  Create(string) (bool, error)
+
+  // Update person
+  Update(*Person) error
 }
 
 type FakeStorage struct {
 	Tokens []string
 }
 
-func (f *FakeStorage) GetPerson(email string) (*Person, error) {
+func (f *FakeStorage) Get(email string) (*Person, error) {
 	p := &Person{
 		Email: email,
 		Accounts: []Account{Account{"bank1", f.Tokens[0]}},
@@ -42,25 +45,30 @@ func (f *FakeStorage) Exists(email string) (bool, error) {
   return true, nil
 }
 
-func (f *FakeStorage) CreatePerson(email string) (bool, error) {
+func (f *FakeStorage) Create(email string) (bool, error) {
   return false, nil
+}
+
+func (f *FakeStorage) Update(*Person) error {
+  return nil
 }
 
 type MongoStorage struct {
 	Session *mgo.Session
 }
 
-func (s *MongoStorage) GetPerson(email string) (*Person, error) {
+func (s *MongoStorage) Get(email string) (*Person, error) {
 	c := s.Session.DB("test").C("people")
 
   person := Person{Email: email}
-	err := c.Find(&person).One(&person)
+  result := new(Person)
+	err := c.Find(person).One(result)
 
 	if err != nil {
 		return nil, err
 	}
 
-	return &person, nil
+	return result, nil
 }
 
 
@@ -80,8 +88,13 @@ func (s *MongoStorage) Exists(email string) (bool, error) {
 	return count == 1, nil
 }
 
+func (s *MongoStorage) Update(p *Person) error {
+	c := s.Session.DB("test").C("people")
+  selector := Person{Email: p.Email}
+  return c.Update(&selector, p)
+}
 
-func (s *MongoStorage) CreatePerson(email string) (bool, error) {
+func (s *MongoStorage) Create(email string) (bool, error) {
   exists, err := s.Exists(email)
 
   if err != nil {
@@ -92,7 +105,7 @@ func (s *MongoStorage) CreatePerson(email string) (bool, error) {
     return false, nil
   }
 
-  log.Printf("CreatePerson")
+  log.Printf("Create")
 
 	c := s.Session.DB("test").C("people")
 	p := &Person{

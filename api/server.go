@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/pcarleton/cashcoach/api/auth"
+	"github.com/pcarleton/cashcoach/api/storage"
 )
 
 var config *Config
@@ -84,7 +85,7 @@ func meHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *a
 }
 
 func transactionsHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *appError {
-	person, err := config.GetPerson(profile.DisplayName)
+	person, err := config.Get(profile.DisplayName)
 
 	if err != nil {
 		return appErrorf(err, "Error loading bank info from database.")
@@ -109,16 +110,30 @@ type JwtRequest struct {
 	IDToken string `json:"idtoken"`
 }
 
-func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
-	req := new(JwtRequest)
-
+func unmarshal(v interface{}, r *http.Request) error {
 	reqBody, err := ioutil.ReadAll(r.Body)
 
 	if err != nil {
-		return appErrorf(err, "bad req")
+		return err
 	}
 
-	err = json.Unmarshal(reqBody, &req)
+	err = json.Unmarshal(reqBody, v)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
+	req := new(JwtRequest)
+
+	err := unmarshal(req, r)
+
+	if err != nil {
+		return appErrorf(err, "bad request")
+	}
 
 	token, err := auth.VerifyGoogleJwt(req.IDToken)
 
@@ -136,7 +151,7 @@ func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "couldn't create session")
 	}
 
-	alreadyExists, err := config.CreatePerson(profile.Email)
+	alreadyExists, err := config.Create(profile.Email)
 
 	if err != nil {
 		return appErrorf(err, "problem checking database")
@@ -153,13 +168,51 @@ func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
 }
 
 func accountsHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *appError {
-	result, err := config.GetPerson(profile.Email)
+	result, err := config.Get(profile.Email)
 
 	if err != nil {
 		return appErrorf(err, "couldn't find %s", profile.Email)
 	}
 
 	return respondJson(w, result)
+}
+
+type AddAccountRequest struct {
+	Name        string
+	PublicToken string
+}
+
+func addAccount(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *appError {
+	person, err := config.Get(profile.Email)
+
+	if err != nil {
+		return appErrorf(err, "couldn't find %s", profile.Email)
+	}
+
+	req := AddAccountRequest{}
+	err = unmarshal(&req, r)
+
+	if err != nil {
+		return appErrorf(err, "bad request")
+	}
+
+	resp, err := config.Plaid.Exchange(req.PublicToken)
+
+	if err != nil {
+		return appErrorf(err, "problem exchanging public token")
+	}
+
+	acct := storage.Account{Name: req.Name, Token: resp.AccessToken}
+
+	person.Accounts = append(person.Accounts, acct)
+
+	err = config.Update(person)
+
+	if err != nil {
+		return appErrorf(err, "problem saving")
+	}
+
+	return respondJson(w, "saved new account")
 }
 
 func main() {
@@ -176,6 +229,7 @@ func main() {
 	http.Handle("/api/transactions", appHandler(handleAuth(transactionsHandler)))
 	http.Handle("/api/jwt", appHandler(jwtHandler))
 	http.Handle("/api/accounts", appHandler(handleAuth(accountsHandler)))
+	http.Handle("/api/accounts/add", appHandler(handleAuth(addAccount)))
 
 	log.Println("Serving...")
 	log.Fatal(http.ListenAndServe(":5001", nil))
