@@ -96,7 +96,7 @@ func transactionsHandler(profile *auth.Profile, w http.ResponseWriter, r *http.R
 	referenceTime := "2006-01-02"
 
 	transactions, err := config.Plaid.Transactions(
-		person.Banks[0].Token, lastMonth.Format(referenceTime), now.Format(referenceTime))
+		person.Accounts[0].Token, lastMonth.Format(referenceTime), now.Format(referenceTime))
 
 	if err != nil {
 		return appErrorf(err, "Error getting transactions")
@@ -136,14 +136,27 @@ func jwtHandler(w http.ResponseWriter, r *http.Request) *appError {
 		return appErrorf(err, "couldn't create session")
 	}
 
-	return respondJson(w, token.Claims)
-}
-
-func dummyMongoHandler(w http.ResponseWriter, r *http.Request) *appError {
-	result, err := config.GetPerson("Ale")
+	alreadyExists, err := config.CreatePerson(profile.Email)
 
 	if err != nil {
-		return appErrorf(err, "couldn't find")
+		return appErrorf(err, "problem checking database")
+	}
+
+	var message string
+	if alreadyExists {
+		message = "sign-in success"
+	} else {
+		message = "new person created"
+	}
+
+	return respondJson(w, message)
+}
+
+func accountsHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *appError {
+	result, err := config.GetPerson(profile.Email)
+
+	if err != nil {
+		return appErrorf(err, "couldn't find %s", profile.Email)
 	}
 
 	return respondJson(w, result)
@@ -162,7 +175,8 @@ func main() {
 	http.Handle("/api/me", appHandler(handleAuth(meHandler)))
 	http.Handle("/api/transactions", appHandler(handleAuth(transactionsHandler)))
 	http.Handle("/api/jwt", appHandler(jwtHandler))
-	http.Handle("/api/mongo", appHandler(dummyMongoHandler))
+	http.Handle("/api/accounts", appHandler(handleAuth(accountsHandler)))
 
+	log.Println("Serving...")
 	log.Fatal(http.ListenAndServe(":5001", nil))
 }

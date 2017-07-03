@@ -21,8 +21,8 @@ func parseConfig() (*viper.Viper, error) {
 }
 
 type Config struct {
-	OAuthConfig  *oauth2.Config
-	Sessions     *auth.SessionHandler
+	OAuthConfig *oauth2.Config
+	Sessions    *auth.SessionHandler
 	storage.Storage
 	Plaid plaid.Client
 }
