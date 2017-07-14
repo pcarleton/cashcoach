@@ -10,6 +10,7 @@ import (
 
 const (
 	DevURL = "https://development.plaid.com"
+	SandboxURL = "https://sandbox.plaid.com"
 )
 
 type Client struct {

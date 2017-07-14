@@ -25,6 +25,11 @@ class Home extends Component {
   handleOnSuccess(resp) {
     console.log("success!");
     console.log(resp);
+    const cb = (data) => {
+      console.log("resp!");
+      console.log(data);
+    }
+    Client.addAccount(cb, 'new account1', resp);
   }
 
 
@@ -34,15 +39,18 @@ class Home extends Component {
     const transactions = this.state.transactions;
 
     return (
+        <div>
         <PlaidLink
           publicKey="5cf2c831a6e43805a92b01fa703ee8"
           product="transactions"
           env="sandbox"
-          clientName="react-client"
+          clientName="Cash Coach"
           onSuccess={this.handleOnSuccess}
+          apiVersion="v2"
         />
 
       <TransactionsTable transactions={transactions}/>
+      </div>
     )
   }
 }

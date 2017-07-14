@@ -1,3 +1,19 @@
+
+function post(cb, endpoint, jsonData) {
+  return fetch(endpoint, {
+    method: 'post',
+    accept: 'application/json',
+    headers: {
+      "Content-type": "application/json"
+    },
+    credentials: "same-origin",
+    body: JSON.stringify(jsonData)
+  }).then(checkStatus)
+    .then(parseJSON)
+    .then(cb);
+}
+
+
 function transactions(cb) {
   return fetch(`api/transactions`, {
     accept: 'application/json',
@@ -17,20 +33,14 @@ function me(cb) {
 }
 
 function verify(cb, idToken) {
-  return fetch(`api/jwt`,
-    {
-        method: 'post',
-        headers: {
-          "Content-type": "application/json"
-        },
-        body: JSON.stringify({"idtoken": idToken}),
-        accept: 'application/json',
-        credentials: "same-origin"
-      }
-).then(checkStatus)
- .then(parseJSON)
- .then(cb);
+  return post(cb, 'api/jwt', {'idtoken': idToken}); 
 }
+
+function addAccount(cb, account_nick, public_token) {
+  return post(cb, 'api/accounts/add', {'name': account_nick,
+                                       'public_token': public_token});
+}
+
 
 
 function checkStatus(response) {
@@ -48,5 +58,5 @@ function parseJSON(response) {
   return response.json();
 }
 
-const Client = { transactions, verify, me };
+const Client = { transactions, verify, me, addAccount};
 export default Client;

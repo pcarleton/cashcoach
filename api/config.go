@@ -54,10 +54,15 @@ func makeConfig(v *viper.Viper) (*Config, error) {
 		Endpoint:     google.Endpoint,
 	}
 
+	plaidURL := plaid.DevURL
+	if v.GetString("plaid.env") == "sandbox" {
+		plaidURL = plaid.SandboxURL
+	}
+
 	plaidClient := plaid.NewClient(
 		v.GetString("plaid.client_id"),
 		v.GetString("plaid.client_secret"),
-		plaid.DevURL)
+		plaidURL)
 
 	sessionHandler, err := auth.CreateSessionHandler(v.GetString("cookie_secret"))
 
