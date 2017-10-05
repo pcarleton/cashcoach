@@ -13,23 +13,28 @@ function post(cb, endpoint, jsonData) {
     .then(cb);
 }
 
-
-function transactions(cb) {
-  return fetch(`api/transactions`, {
+function get(cb, endpoint) {
+  return fetch(endpoint, {
     accept: 'application/json',
     credentials: "same-origin"
   }).then(checkStatus)
     .then(parseJSON)
     .then(cb);
+
 }
 
+
+function transactions(cb) {
+  return get(cb, 'api/transactions');
+}
+
+function accounts(cb) {
+  return get(cb, 'api/accounts');
+}
+
+
 function me(cb) {
-  return fetch(`api/me`, {
-    accept: 'application/json',
-    credentials: "same-origin"
-  }).then(checkStatus)
-    .then(parseJSON)
-    .then(cb);
+  return get(cb, 'api/me');
 }
 
 function verify(cb, idToken) {
@@ -58,5 +63,5 @@ function parseJSON(response) {
   return response.json();
 }
 
-const Client = { transactions, verify, me, addAccount};
+const Client = { transactions, verify, me, addAccount, accounts};
 export default Client;

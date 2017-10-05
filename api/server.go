@@ -85,10 +85,10 @@ func meHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *a
 }
 
 func transactionsHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Request) *appError {
-	person, err := config.Get(profile.DisplayName)
+	person, err := config.Get(profile.Email)
 
 	if err != nil {
-		return appErrorf(err, "Error loading bank info from database.")
+		return appErrorf(err, "Error loading bank info from database for %s.", profile.Email)
 	}
 
 	now := time.Now()
@@ -174,6 +174,10 @@ func accountsHandler(profile *auth.Profile, w http.ResponseWriter, r *http.Reque
 		return appErrorf(err, "couldn't find %s", profile.Email)
 	}
 
+
+  // TODO: Don't just take the first one...
+
+  // TODO: I should never send the raw API token to the client.
 	return respondJson(w, result)
 }
 

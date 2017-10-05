@@ -4,6 +4,11 @@ import Client from './Client';
 const MATCHING_ITEM_LIMIT = 25;
 
 class TransactionsTable extends React.Component {
+  constructor(props) {
+    super(props);
+    this.setState({transactions: props.transactions});
+  }
+
   state = {
     transactions: [],
     startDate: '',
@@ -31,8 +36,8 @@ class TransactionsTable extends React.Component {
   };
 
   render() {
-    const { showRemoveIcon, transactions } = this.state;
-    const transRows = this.props.transactions.map((trans, idx) => (
+    const { transactions } = this.state;
+    const transRows = transactions.map((trans, idx) => (
       <tr
         key={idx}
       >
