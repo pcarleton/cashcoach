@@ -19,12 +19,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+  "github.com/pcarleton/cashcoach/cli/lib"
 )
 
-type Account struct{
-  Name string
-  Token string
-}
 
 
 // configCmd represents the config command
@@ -38,8 +36,7 @@ var configCmd = &cobra.Command{
     // TODO: hide secrets on printing by default
     fmt.Printf("Client secret: %s\n", viper.GetString("client_secret"))
 
-    accounts := make([]Account, 0, 10)
-    err := viper.UnmarshalKey("accounts", &accounts)
+    accounts, err := lib.GetAccounts()
     if err != nil {
       panic(err)
     }
