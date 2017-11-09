@@ -65,3 +65,6 @@ func LastNDays(n int) Interval {
 func TodayStr() string {
   return time.Now().Format(DateFmt)
 }
+
+
+
