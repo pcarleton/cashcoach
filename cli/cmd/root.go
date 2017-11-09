@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	homedir "github.com/mitchellh/go-homedir"
@@ -29,14 +30,14 @@ var cfgFile string
 var RootCmd = &cobra.Command{
 	Use:   "cashcoach",
 	Short: "A personal finance command line utility",
-	Long: `Interacts with the Plaid API to extract reports into Google Sheets.`,
+	Long:  `Interacts with the Plaid API to extract reports into Google Sheets.`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		log.Println(err)
 		os.Exit(1)
 	}
 }
@@ -76,6 +77,6 @@ func initConfig() {
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Print("Using config file:", viper.ConfigFileUsed())
 	}
 }

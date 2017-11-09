@@ -20,10 +20,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-  "github.com/pcarleton/cashcoach/cli/lib"
+	"github.com/pcarleton/cashcoach/cli/lib"
 )
-
-
 
 // configCmd represents the config command
 var configCmd = &cobra.Command{
@@ -32,20 +30,20 @@ var configCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("config called")
 
-    fmt.Printf("Client ID: %s\n", viper.GetString("client_id"))
-    // TODO: hide secrets on printing by default
-    fmt.Printf("Client secret: %s\n", viper.GetString("client_secret"))
+		fmt.Printf("Client ID: %s\n", viper.GetString("client_id"))
+		// TODO: hide secrets on printing by default
+		fmt.Printf("Client secret: %s\n", viper.GetString("client_secret"))
 
-    accounts, err := lib.GetAccounts()
-    if err != nil {
-      panic(err)
-    }
-    fmt.Println("Accounts")
-    fmt.Println("Name\tToken")
+		accounts, err := lib.GetAccounts()
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("Accounts")
+		fmt.Println("Name\tToken")
 
-    for _, acct := range(accounts) {
-      fmt.Printf("%s\t%s\n", acct.Name, acct.Token)
-    }
+		for _, acct := range accounts {
+			fmt.Printf("%s\t%s\n", acct.Name, acct.Token)
+		}
 
 	},
 }

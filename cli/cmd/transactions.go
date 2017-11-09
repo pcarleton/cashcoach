@@ -17,77 +17,98 @@ package cmd
 import (
 	"fmt"
 	"log"
-  "os"
-  "strings"
+	"os"
+	"strings"
 
+	"github.com/pcarleton/cashcoach/cli/lib"
 	"github.com/spf13/cobra"
-  "github.com/pcarleton/cashcoach/cli/lib"
 )
+
+func pickInterval() lib.Interval {
+	if flagLastN != 0 {
+		return lib.LastNDays(flagLastN)
+	}
+
+	start := flagStart
+	end := flagEnd
+	if end == "" && start != "" {
+		// Pick today as end
+		end = lib.TodayStr()
+	}
+
+	if end == "" && start == "" {
+		return lib.LastNDays(30)
+	}
+
+	return lib.Interval{
+		Start: start,
+		End:   end,
+	}
+}
 
 // transactionsCmd represents the transactions command
 var transactionsCmd = &cobra.Command{
 	Use:   "transactions",
 	Short: "Fetch transactions for a particular account",
-  Args: cobra.MinimumNArgs(1),
+	Args:  cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 
-    // TODO: Allow specifying multiple accounts?
-    acct, err := lib.GetAccount(args[0])
+		// TODO: Allow specifying multiple accounts?
+		acct, err := lib.GetAccount(args[0])
 
-    if err != nil {
-      panic(err)
-    }
+		if err != nil {
+			panic(err)
+		}
 
-    if acct == nil {
-      fmt.Println("No account with that name.")
-      os.Exit(1)
-    }
+		if acct == nil {
+			fmt.Println("No account with that name.")
+			os.Exit(1)
+		}
 
-    fmt.Printf("Found %s\n", acct.Name)
+		client := lib.GetClient()
+		interval := pickInterval()
 
-    client := lib.GetClient()
+		resp, err := client.Transactions(acct.Token, interval.Start, interval.End)
 
-    // TODO: Specify date range via flags
-    resp, err := client.Transactions(acct.Token, "2017-10-01", "2017-10-07")
+		if err != nil {
+			log.Fatal(err)
+		}
 
-    if err != nil {
-      log.Fatal(err)
-    }
+		log.Printf("Showing transactions for %s to %s", interval.Start, interval.End)
 
-    headers := []string{
-      "account",
-      "date",
-      "description",
-      "category",
-      "amount",
-    }
+		headers := []string{
+			"account",
+			"date",
+			"description",
+			"category",
+			"amount",
+		}
 
-    fmt.Println(strings.Join(headers,"\t"))
-    // TODO: Allow JSON output via flags
-    for _, trans := range(resp.Transactions) {
-      pieces := []string{
-        trans.AccountID,
-        trans.Date,
-        trans.Name,
-        strings.Join(trans.Category, ":"),
-        fmt.Sprintf("%f", trans.Amount),
-      }
+		fmt.Println(strings.Join(headers, "\t"))
+		// TODO: Allow JSON output via flags
+		for _, trans := range resp.Transactions {
+			pieces := []string{
+				trans.AccountID,
+				trans.Date,
+				trans.Name,
+				strings.Join(trans.Category, ":"),
+				fmt.Sprintf("%.2f", trans.Amount),
+			}
 
-      fmt.Println(strings.Join(pieces, "\t"))
-    }
-  },
+			fmt.Println(strings.Join(pieces, "\t"))
+		}
+	},
 }
+
+var flagStart string
+var flagEnd string
+var flagLastN int
 
 func init() {
 	RootCmd.AddCommand(transactionsCmd)
-
-	// Here you will define your flags and configuration settings.
-
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// transactionsCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// transactionsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	transactionsCmd.PersistentFlags().StringVarP(&flagStart, "start", "s", "", "Start date to find transactions")
+	transactionsCmd.PersistentFlags().StringVarP(&flagEnd, "end", "e", "", "End date to find transactions (inclusive)")
+	transactionsCmd.PersistentFlags().IntVarP(&flagLastN, "lastN", "l", 0, "Fecth transactions for the last N days")
 }

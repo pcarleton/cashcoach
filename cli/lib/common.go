@@ -1,8 +1,14 @@
 package lib
 
 import (
+  "time"
+
 	"github.com/spf13/viper"
 	"github.com/pcarleton/cashcoach/api/plaid"
+)
+
+const (
+  DateFmt = "2006-01-02"
 )
 
 type Account struct{
@@ -38,4 +44,24 @@ func GetClient() plaid.Client {
 		viper.GetString("client_id"),
 		viper.GetString("client_secret"),
 		plaid.DevURL)
+}
+
+type Interval struct {
+  Start string
+  End string
+}
+
+
+func LastNDays(n int) Interval {
+  today := time.Now()
+  nDaysAgo := today.Add(time.Duration(n * -24) * time.Hour )
+
+  return Interval{
+    Start: nDaysAgo.Format(DateFmt),
+    End: today.Format(DateFmt),
+  }
+}
+
+func TodayStr() string {
+  return time.Now().Format(DateFmt)
 }
