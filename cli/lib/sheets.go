@@ -3,19 +3,28 @@ package lib
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
 	"log"
 
 	"github.com/spf13/viper"
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/sheets/v4"
+	"google.golang.org/api/drive/v3"
 )
 
 const (
-	scope = "https://www.googleapis.com/auth/spreadsheets"
+	sheetsScope = "https://www.googleapis.com/auth/spreadsheets"
+	sheetMimeType = "application/vnd.google-apps.spreadsheet"
 )
 
-func ListMajors() {
+type Service struct {
+	Sheets *sheets.Service
+	Drive *drive.Service
+}
+
+
+func getClient() *http.Client {
 	robotCredsPath := viper.GetString("robot_creds")
 	b, err := ioutil.ReadFile(robotCredsPath)
 	if err != nil {
@@ -24,35 +33,51 @@ func ListMajors() {
 
 	// If modifying these scopes, delete your previously saved credentials
 	// at ~/.credentials/sheets.googleapis.com-go-quickstart.json
-	config, err := google.JWTConfigFromJSON(b, scope)
+	config, err := google.JWTConfigFromJSON(b, sheetsScope, drive.DriveScope)
 	if err != nil {
 		log.Fatalf("Unable to parse robot creds to config: %v", err)
 	}
 	ctx := context.Background()
 	client := config.Client(ctx)
+	
+	return client
 
-	srv, err := sheets.New(client)
+}
+
+func GetService() Service {
+	client:= getClient()
+	sheetsSrv, err := sheets.New(client)
 	if err != nil {
 		log.Fatalf("Unable to retrieve Sheets Client %v", err)
 	}
 
-	// Prints the names and majors of students in a sample spreadsheet:
-	// https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-	spreadsheetId := "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
-	readRange := "Class Data!A2:E"
-	resp, err := srv.Spreadsheets.Values.Get(spreadsheetId, readRange).Do()
+	driveSrv, err := drive.New(client)
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet. %v", err)
+		log.Fatalf("Unable to retrieve Sheets Client %v", err)
 	}
 
-	if len(resp.Values) > 0 {
-		fmt.Println("Name, Major:")
-		for _, row := range resp.Values {
-			// Print columns A and E, which correspond to indices 0 and 4.
-			fmt.Printf("%s, %s\n", row[0], row[4])
-		}
-	} else {
-		fmt.Print("No data found.")
-	}
-
+	return Service{sheetsSrv, driveSrv}
 }
+
+func ListSpreadsheets() {
+	srv := GetService()
+	r, err := srv.Drive.Files.List().PageSize(10).
+			Fields("nextPageToken, files(id, name, mimeType)").Do()
+	if err != nil {
+		log.Fatalf("Unable to retrieve data from drive. %v", err)
+	}
+
+  if err != nil {
+    log.Fatalf("Unable to retrieve files: %v", err)
+  }
+
+  fmt.Println("Files:")
+  if len(r.Files) > 0 {
+    for _, i := range r.Files {
+      fmt.Printf("%s (%s) %s\n", i.Name, i.Id, i.MimeType)
+    }
+  } else {
+    fmt.Println("No files found.")
+  }
+}
+

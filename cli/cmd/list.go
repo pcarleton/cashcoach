@@ -24,10 +24,7 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list Google sheets",
 	Run: func(cmd *cobra.Command, args []string) {
-    
-    lib.ListMajors()
-
-
+    lib.ListSpreadsheets()
 	},
 }
 
