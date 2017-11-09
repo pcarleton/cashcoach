@@ -24,9 +24,12 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list Google sheets",
 	Run: func(cmd *cobra.Command, args []string) {
-    lib.ListSpreadsheets()
+    lib.ListSpreadsheets(flagQuery)
 	},
 }
+
+
+var flagQuery string
 
 func init() {
 	sheetsCmd.AddCommand(listCmd)
@@ -39,5 +42,5 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	listCmd.Flags().StringVarP(&flagQuery, "query", "q", "", "Query to pass to Files.list")
 }

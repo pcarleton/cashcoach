@@ -31,17 +31,14 @@ func getClient() *http.Client {
 		log.Fatalf("Unable to read client secret file: %v", err)
 	}
 
-	// If modifying these scopes, delete your previously saved credentials
-	// at ~/.credentials/sheets.googleapis.com-go-quickstart.json
 	config, err := google.JWTConfigFromJSON(b, sheetsScope, drive.DriveScope)
 	if err != nil {
 		log.Fatalf("Unable to parse robot creds to config: %v", err)
 	}
 	ctx := context.Background()
 	client := config.Client(ctx)
-	
-	return client
 
+	return client
 }
 
 func GetService() Service {
@@ -59,10 +56,11 @@ func GetService() Service {
 	return Service{sheetsSrv, driveSrv}
 }
 
-func ListSpreadsheets() {
+func ListSpreadsheets(query string) {
 	srv := GetService()
 	r, err := srv.Drive.Files.List().PageSize(10).
-			Fields("nextPageToken, files(id, name, mimeType)").Do()
+			Q(query).
+			Fields("nextPageToken, files(id, name)").Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve data from drive. %v", err)
 	}
