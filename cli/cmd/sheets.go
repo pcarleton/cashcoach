@@ -29,6 +29,21 @@ var sheetsCmd = &cobra.Command{
 	},
 }
 
+// listCmd represents the list command
+var listCmd = &cobra.Command{
+	Use:   "list",
+	Short: "list Google sheets",
+	Run: func(cmd *cobra.Command, args []string) {
+    lib.ListSpreadsheets(flagQuery)
+	},
+}
+
+var flagQuery string
+
 func init() {
 	RootCmd.AddCommand(sheetsCmd)
+
+	sheetsCmd.AddCommand(listCmd)
+
+	listCmd.Flags().StringVarP(&flagQuery, "query", "q", "", "Query to pass to Files.list")
 }
