@@ -50,8 +50,17 @@ var importCmd = &cobra.Command{
     if err != nil {
       log.Fatalf("Unable to import file: %v", err)
     }
+    log.Print("Created spreadsheet.")
 
-    log.Printf("Create spreadsheet: %s\n", r.SpreadsheetUrl)
+    log.Print("Sharing...")
+    email := viper.GetString("email")
+
+    err = srv.ShareFile(r.SpreadsheetId, email)
+    if err != nil {
+      log.Fatalf("Unable to share file: %v", err)
+    }
+
+    log.Printf("Complete! View at: %s\n", r.SpreadsheetUrl)
 	},
 }
 
