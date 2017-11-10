@@ -74,6 +74,12 @@ var transactionsCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
+    delimiter, err := cmd.Flags().GetString("delimiter")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+
 		log.Printf("Showing transactions for %s to %s", interval.Start, interval.End)
 
 		headers := []string{
@@ -95,7 +101,7 @@ var transactionsCmd = &cobra.Command{
 				fmt.Sprintf("%.2f", trans.Amount),
 			}
 
-			fmt.Println(strings.Join(pieces, "\t"))
+			fmt.Println(strings.Join(pieces, delimiter))
 		}
 	},
 }
@@ -111,4 +117,5 @@ func init() {
 	transactionsCmd.PersistentFlags().StringVarP(&flagStart, "start", "s", "", "Start date to find transactions")
 	transactionsCmd.PersistentFlags().StringVarP(&flagEnd, "end", "e", "", "End date to find transactions (inclusive)")
 	transactionsCmd.PersistentFlags().IntVarP(&flagLastN, "lastN", "l", 0, "Fecth transactions for the last N days")
+	transactionsCmd.Flags().StringP("delimiter", "d", "\t", "Delimiter to use for printing")
 }
