@@ -18,6 +18,8 @@ import (
 	"fmt"
   "log"
   "os"
+  "strings"
+
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -54,6 +56,24 @@ var importCmd = &cobra.Command{
 	},
 }
 
+// deleteCmd represents the delete command
+var deleteCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete file from Drive",
+	Run: func(cmd *cobra.Command, args []string) {
+    srv := lib.GetService()
+    fileId := args[0]
+
+    err := srv.Delete(fileId)
+    if err != nil {
+      log.Fatalf("Unable to delete file: %v", err)
+    }
+
+    log.Printf("Deleted %s.\n", fileId)
+	},
+}
+
+
 
 // shareCmd represents the share command
 var shareCmd = &cobra.Command{
@@ -83,21 +103,45 @@ var listCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
     srv := lib.GetService()
 		files, err := srv.ListSpreadsheets(flagQuery)
-
-    ids, err := cmd.Flags().GetBool("ids")
-
 		if err != nil {
 			log.Fatalf("Unable to retrieve data from drive. %v", err)
 		}
-		fmt.Println("Files:")
+
+    ids, err := cmd.Flags().GetBool("ids")
+    mime, err := cmd.Flags().GetBool("mime")
+
+		if err != nil {
+			log.Fatalf("Unable to parse flags. %v", err)
+		}
+
+    headers := []string{"Name"}
+    if ids {
+      headers = append(headers, "ID")
+    } else {
+      headers = append(headers, "Link")
+    }
+
+    if mime {
+      headers = append(headers, "Mime Type")
+    }
+
+    // TODO: Better table printing
+    fmt.Println(strings.Join(headers, "\t"))
+
 		if len(files) > 0 {
 			for _, i := range files {
+        pieces := []string{i.Name}
         if ids {
-				  fmt.Printf("%s\t%s\n", i.Name, i.Id)
+          pieces = append(pieces, i.Id)
         } else {
           link := fmt.Sprintf(lib.LinkTmpl, i.Id)
-				  fmt.Printf("%s\t%s\n", i.Name, link)
+          pieces = append(pieces, link)
         }
+
+        if mime {
+          pieces = append(pieces, i.MimeType)
+        }
+        fmt.Println(strings.Join(pieces, "\t"))
 			}
 		} else {
 			fmt.Println("No files found.")
@@ -114,10 +158,13 @@ func init() {
 
 	listCmd.Flags().StringVarP(&flagQuery, "query", "q", "", "Query to pass to Files.list")
 	listCmd.Flags().BoolP("ids", "i", false, "Only list ID's")
+	listCmd.Flags().BoolP("mime", "m", false, "Print the file mime types")
 
-	sheetsCmd.AddCommand(importCmd)
 	sheetsCmd.AddCommand(shareCmd)
 
   shareCmd.Flags().String("email", "", "Email to share file with")
   viper.BindPFlag("email", shareCmd.Flags().Lookup("email"))
+
+	sheetsCmd.AddCommand(importCmd)
+	sheetsCmd.AddCommand(deleteCmd)
 }

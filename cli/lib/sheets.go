@@ -32,7 +32,7 @@ type Service struct {
 func (srv *Service) ListSpreadsheets(query string) ([]*drive.File, error) {
 	r, err := srv.Drive.Files.List().PageSize(10).
 			Q(query).
-			Fields("nextPageToken, files(id, name)").Do()
+			Fields("nextPageToken, files(id, name, mimeType)").Do()
 
 	if err != nil {
     return nil, err
@@ -57,10 +57,16 @@ func (srv *Service) ShareFile(fileID, email string) error {
     Type: "user",
   }
 
-  req := srv.Drive.Permissions.Create(fileID, &perm).TransferOwnership(true)
+  req := srv.Drive.Permissions.Create(fileID, &perm).SendNotificationEmail(false)
 
 
   _, err := req.Do()
+  return err
+}
+
+func (srv *Service) Delete(fileID string) error {
+  req := srv.Drive.Files.Delete(fileID)
+  err := req.Do()
   return err
 }
 
