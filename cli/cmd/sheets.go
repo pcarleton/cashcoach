@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
   "log"
-  "os"
   "strings"
 
 	"github.com/spf13/cobra"
@@ -42,17 +41,16 @@ var importCmd = &cobra.Command{
     srv := lib.GetService()
     fname := args[0]
 
-    reader, err := os.Open(fname)
+    data, err := lib.TsvToArr(fname)
     if err != nil {
       log.Fatalf("Unable to open file: %v", err)
     }
 
-    r, err := srv.ImportSpreadsheet(fname, reader)
+    r, err := srv.ImportSpreadsheet(fname, data)
     if err != nil {
       log.Fatalf("Unable to import file: %v", err)
     }
 
-    log.Printf("%+v\n", r)
     log.Printf("Create spreadsheet: %s\n", r.SpreadsheetUrl)
 	},
 }

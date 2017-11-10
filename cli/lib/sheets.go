@@ -1,10 +1,13 @@
 package lib
 
 import (
+  "fmt"
 	"io/ioutil"
 	"net/http"
 	"log"
-  "io"
+  "bufio"
+  "os"
+  "strings"
 
 	"github.com/spf13/viper"
 	"golang.org/x/net/context"
@@ -19,6 +22,7 @@ const (
 
   LinkTmpl = "https://docs.google.com/spreadsheets/d/%s"
   SheetLinkTmpl = "https://docs.google.com/spreadsheets/d/%s/edit#gid=%s"
+  Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
 
 type Service struct {
@@ -38,21 +42,43 @@ func (srv *Service) ListSpreadsheets(query string) ([]*drive.File, error) {
   return r.Files, nil
 }
 
-func (srv *Service) ImportSpreadsheet(ssName string, data io.Reader) (*sheets.Spreadsheet, error) {
+func (srv *Service) ImportSpreadsheet(ssName string, data [][]interface{}) (*sheets.Spreadsheet, error) {
   ss := &sheets.Spreadsheet{
     Properties: &sheets.SpreadsheetProperties{Title: ssName},
   }
+  ss2, err := srv.Sheets.Spreadsheets.Create(ss).Do()
+  if err != nil {
+    return nil, err
+  }
 
-  r, err := srv.Sheets.Spreadsheets.Create(ss).Do()
+
+  bottomLeft := CellPos{len(data), len(data[0])}
+
+  aRange := ARange(CellPos{}, bottomLeft)
+
+  vRange := &sheets.ValueRange{
+    Range: aRange,
+    Values: data,
+  }
+
+  req := srv.Sheets.Spreadsheets.Values.Update(ss2.SpreadsheetId, aRange, vRange)
+
+  req.ValueInputOption("USER_ENTERED")
+
+  _, err = req.Do()
+
+  if err != nil {
+    return nil, err
+  }
 
   // TODO: Return spreadsheet or something
-  return r, err
+  return ss2,  err
 }
 
 func (srv *Service) ShareFile(fileID, email string) error {
   perm := drive.Permission{
     EmailAddress: email,
-    Role: "owner",
+    Role: "writer",
     Type: "user",
   }
 
@@ -67,6 +93,59 @@ func (srv *Service) Delete(fileID string) error {
   req := srv.Drive.Files.Delete(fileID)
   err := req.Do()
   return err
+}
+
+func aRangeLetter(idx int) string {
+  secondLet := idx % len(Alphabet)
+
+  if idx > len(Alphabet) {
+    firstLet := idx / len(Alphabet)
+    return fmt.Sprintf("%s%s",
+    Alphabet[firstLet:firstLet + 1], Alphabet[secondLet:secondLet + 1])
+  }
+
+  return fmt.Sprintf("%s", Alphabet[secondLet:secondLet+1])
+}
+
+type CellPos struct {
+  Row int
+  Col int
+}
+
+func (c CellPos) ANotation() string {
+  return fmt.Sprintf("%s%d", aRangeLetter(c.Col), c.Row + 1)
+}
+
+func ARange(start, end CellPos) string {
+  return fmt.Sprintf("%s:%s", start.ANotation(), end.ANotation())
+}
+
+func TsvToArr(fname string) ([][]interface{}, error) {
+    reader, err := os.Open(fname)
+    if err != nil {
+      return nil, err
+    }
+    delimiter := "\t"
+
+    scanner := bufio.NewScanner(reader)
+
+    data := make([][]interface{}, 0)
+
+    for scanner.Scan() {
+      pieces := strings.Split(scanner.Text(), delimiter)
+      data = append(data, strToInterface(pieces))
+    }
+
+    return data, nil
+}
+
+func strToInterface(strs []string) []interface{} {
+      arr := make([]interface{}, len(strs))
+
+      for i, s := range(strs) {
+        arr[i] = s
+      }
+      return arr
 }
 
 func getClient() *http.Client {
