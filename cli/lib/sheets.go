@@ -1,7 +1,6 @@
 package lib
 
 import (
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"log"
@@ -23,6 +22,18 @@ type Service struct {
 	Drive *drive.Service
 }
 
+
+func (srv *Service) ListSpreadsheets(query string) ([]*drive.File, error) {
+	r, err := srv.Drive.Files.List().PageSize(10).
+			Q(query).
+			Fields("nextPageToken, files(id, name)").Do()
+
+	if err != nil {
+    return nil, err
+	}
+
+  return r.Files, nil
+}
 
 func getClient() *http.Client {
 	robotCredsPath := viper.GetString("robot_creds")
@@ -54,28 +65,5 @@ func GetService() Service {
 	}
 
 	return Service{sheetsSrv, driveSrv}
-}
-
-func ListSpreadsheets(query string) {
-	srv := GetService()
-	r, err := srv.Drive.Files.List().PageSize(10).
-			Q(query).
-			Fields("nextPageToken, files(id, name)").Do()
-	if err != nil {
-		log.Fatalf("Unable to retrieve data from drive. %v", err)
-	}
-
-  if err != nil {
-    log.Fatalf("Unable to retrieve files: %v", err)
-  }
-
-  fmt.Println("Files:")
-  if len(r.Files) > 0 {
-    for _, i := range r.Files {
-      fmt.Printf("%s (%s) %s\n", i.Name, i.Id, i.MimeType)
-    }
-  } else {
-    fmt.Println("No files found.")
-  }
 }
 

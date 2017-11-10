@@ -16,8 +16,10 @@ package cmd
 
 import (
 	"fmt"
+  "log"
 
 	"github.com/spf13/cobra"
+	"github.com/pcarleton/cashcoach/cli/lib"
 )
 
 // sheetsCmd represents the sheets command
@@ -25,7 +27,7 @@ var sheetsCmd = &cobra.Command{
 	Use:   "sheets",
 	Short: "Interact with Google Sheets",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("sheets called")
+		log.Println("sheets called")
 	},
 }
 
@@ -34,7 +36,20 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list Google sheets",
 	Run: func(cmd *cobra.Command, args []string) {
-    lib.ListSpreadsheets(flagQuery)
+    srv := lib.GetService()
+		files, err := srv.ListSpreadsheets(flagQuery)
+
+		if err != nil {
+			log.Fatalf("Unable to retrieve data from drive. %v", err)
+		}
+		fmt.Println("Files:")
+		if len(files) > 0 {
+			for _, i := range files {
+				fmt.Printf("%s (%s) %s\n", i.Name, i.Id, i.MimeType)
+			}
+		} else {
+			fmt.Println("No files found.")
+		}
 	},
 }
 
