@@ -14,6 +14,17 @@ const (
 type Account struct{
   Name string
   Token string
+  Nicknames map[string]string
+}
+
+func (a *Account) NickMap(accts []plaid.Account) map[string]string {
+  nickMap := make(map[string]string)
+
+  for _, acct := range(accts) {
+    nickMap[acct.ID] = a.Nicknames[acct.Mask]
+  }
+
+  return nickMap
 }
 
 func GetAccounts() ([]Account, error) {

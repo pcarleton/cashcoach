@@ -90,11 +90,16 @@ var transactionsCmd = &cobra.Command{
 			"amount",
 		}
 
+    nickMap := acct.NickMap(resp.Accounts)
+
+    log.Printf("Nicks: %+v", nickMap)
+    log.Printf("Names: %+v", acct.Nicknames)
+
 		fmt.Println(strings.Join(headers, "\t"))
 		// TODO: Allow JSON output via flags
 		for _, trans := range resp.Transactions {
 			pieces := []string{
-				trans.AccountID,
+				nickMap[trans.AccountID],
 				trans.Date,
 				trans.Name,
 				strings.Join(trans.Category, ":"),
