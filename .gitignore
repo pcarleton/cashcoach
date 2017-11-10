@@ -1,3 +1,4 @@
 .idea
+*.tsv
 .env
 *.swp

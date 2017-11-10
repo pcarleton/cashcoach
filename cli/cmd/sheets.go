@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
   "log"
+  "os"
 
 	"github.com/spf13/cobra"
 	"github.com/pcarleton/cashcoach/cli/lib"
@@ -30,6 +31,28 @@ var sheetsCmd = &cobra.Command{
 		log.Println("sheets called")
 	},
 }
+
+// importCmd represents the import command
+var importCmd = &cobra.Command{
+	Use:   "import",
+	Short: "import TSV to Google sheets",
+	Run: func(cmd *cobra.Command, args []string) {
+    srv := lib.GetService()
+    fname := args[0]
+
+    reader, err := os.Open(fname)
+    if err != nil {
+      log.Fatalf("Unable to open file: %v", err)
+    }
+
+		err = srv.ImportSpreadsheet(fname, reader)
+    if err != nil {
+      log.Fatalf("Unable to import file: %v", err)
+    }
+
+	},
+}
+
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
@@ -59,6 +82,7 @@ func init() {
 	RootCmd.AddCommand(sheetsCmd)
 
 	sheetsCmd.AddCommand(listCmd)
+	sheetsCmd.AddCommand(importCmd)
 
 	listCmd.Flags().StringVarP(&flagQuery, "query", "q", "", "Query to pass to Files.list")
 }

@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"log"
+  "io"
 
 	"github.com/spf13/viper"
 	"golang.org/x/net/context"
@@ -33,6 +34,15 @@ func (srv *Service) ListSpreadsheets(query string) ([]*drive.File, error) {
 	}
 
   return r.Files, nil
+}
+
+func (srv *Service) ImportSpreadsheet(ssName string, data io.Reader) error {
+  newFile := drive.File{Name: ssName, MimeType: sheetMimeType}
+
+  r, err := srv.Drive.Files.Create(&newFile).Media(data).Do()
+
+  log.Printf("%+v", r)
+  return err
 }
 
 func getClient() *http.Client {
