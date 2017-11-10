@@ -20,7 +20,6 @@ import (
   "os"
   "strings"
 
-
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/pcarleton/cashcoach/cli/lib"
@@ -48,11 +47,13 @@ var importCmd = &cobra.Command{
       log.Fatalf("Unable to open file: %v", err)
     }
 
-		err = srv.ImportSpreadsheet(fname, reader)
+    r, err := srv.ImportSpreadsheet(fname, reader)
     if err != nil {
       log.Fatalf("Unable to import file: %v", err)
     }
 
+    log.Printf("%+v\n", r)
+    log.Printf("Create spreadsheet: %s\n", r.SpreadsheetUrl)
 	},
 }
 

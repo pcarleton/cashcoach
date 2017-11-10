@@ -26,9 +26,6 @@ type Service struct {
 	Drive *drive.Service
 }
 
-
-
-
 func (srv *Service) ListSpreadsheets(query string) ([]*drive.File, error) {
 	r, err := srv.Drive.Files.List().PageSize(10).
 			Q(query).
@@ -41,13 +38,15 @@ func (srv *Service) ListSpreadsheets(query string) ([]*drive.File, error) {
   return r.Files, nil
 }
 
-func (srv *Service) ImportSpreadsheet(ssName string, data io.Reader) error {
-  newFile := drive.File{Name: ssName, MimeType: sheetMimeType}
+func (srv *Service) ImportSpreadsheet(ssName string, data io.Reader) (*sheets.Spreadsheet, error) {
+  ss := &sheets.Spreadsheet{
+    Properties: &sheets.SpreadsheetProperties{Title: ssName},
+  }
 
-  _, err := srv.Drive.Files.Create(&newFile).Media(data).Do()
+  r, err := srv.Sheets.Spreadsheets.Create(ss).Do()
 
   // TODO: Return spreadsheet or something
-  return err
+  return r, err
 }
 
 func (srv *Service) ShareFile(fileID, email string) error {
