@@ -62,13 +62,20 @@ var listCmd = &cobra.Command{
     srv := lib.GetService()
 		files, err := srv.ListSpreadsheets(flagQuery)
 
+    ids, err := cmd.Flags().GetBool("ids")
+
 		if err != nil {
 			log.Fatalf("Unable to retrieve data from drive. %v", err)
 		}
 		fmt.Println("Files:")
 		if len(files) > 0 {
 			for _, i := range files {
-				fmt.Printf("%s (%s) %s\n", i.Name, i.Id, i.MimeType)
+        if ids {
+				  fmt.Printf("%s\t%s\n", i.Name, i.Id)
+        } else {
+          link := fmt.Sprintf(lib.LinkTmpl, i.Id)
+				  fmt.Printf("%s\t%s\n", i.Name, link)
+        }
 			}
 		} else {
 			fmt.Println("No files found.")
@@ -85,4 +92,5 @@ func init() {
 	sheetsCmd.AddCommand(importCmd)
 
 	listCmd.Flags().StringVarP(&flagQuery, "query", "q", "", "Query to pass to Files.list")
+	listCmd.Flags().BoolP("ids", "i", false, "Only list ID's")
 }

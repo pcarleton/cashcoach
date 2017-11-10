@@ -16,12 +16,17 @@ import (
 const (
 	sheetsScope = "https://www.googleapis.com/auth/spreadsheets"
 	sheetMimeType = "application/vnd.google-apps.spreadsheet"
+
+  LinkTmpl = "https://docs.google.com/spreadsheets/d/%s"
+  SheetLinkTmpl = "https://docs.google.com/spreadsheets/d/%s/edit#gid=%s"
 )
 
 type Service struct {
 	Sheets *sheets.Service
 	Drive *drive.Service
 }
+
+
 
 
 func (srv *Service) ListSpreadsheets(query string) ([]*drive.File, error) {
