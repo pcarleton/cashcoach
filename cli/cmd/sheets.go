@@ -20,6 +20,7 @@ import (
   "os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 	"github.com/pcarleton/cashcoach/cli/lib"
 )
 
@@ -52,6 +53,27 @@ var importCmd = &cobra.Command{
 
 	},
 }
+
+
+// shareCmd represents the share command
+var shareCmd = &cobra.Command{
+	Use:   "share",
+	Short: "share the specified file with the user specified in config",
+	Run: func(cmd *cobra.Command, args []string) {
+    srv := lib.GetService()
+    fileID := args[0]
+
+    email := viper.GetString("email")
+
+    err := srv.ShareFile(fileID, email)
+    if err != nil {
+      log.Fatalf("Unable to share file: %v", err)
+    }
+
+    log.Printf("Successfully shared %s with %s\n", fileID, email)
+	},
+}
+
 
 
 // listCmd represents the list command
@@ -89,8 +111,13 @@ func init() {
 	RootCmd.AddCommand(sheetsCmd)
 
 	sheetsCmd.AddCommand(listCmd)
-	sheetsCmd.AddCommand(importCmd)
 
 	listCmd.Flags().StringVarP(&flagQuery, "query", "q", "", "Query to pass to Files.list")
 	listCmd.Flags().BoolP("ids", "i", false, "Only list ID's")
+
+	sheetsCmd.AddCommand(importCmd)
+	sheetsCmd.AddCommand(shareCmd)
+
+  shareCmd.Flags().String("email", "", "Email to share file with")
+  viper.BindPFlag("email", shareCmd.Flags().Lookup("email"))
 }

@@ -44,9 +44,23 @@ func (srv *Service) ListSpreadsheets(query string) ([]*drive.File, error) {
 func (srv *Service) ImportSpreadsheet(ssName string, data io.Reader) error {
   newFile := drive.File{Name: ssName, MimeType: sheetMimeType}
 
-  r, err := srv.Drive.Files.Create(&newFile).Media(data).Do()
+  _, err := srv.Drive.Files.Create(&newFile).Media(data).Do()
 
-  log.Printf("%+v", r)
+  // TODO: Return spreadsheet or something
+  return err
+}
+
+func (srv *Service) ShareFile(fileID, email string) error {
+  perm := drive.Permission{
+    EmailAddress: email,
+    Role: "owner",
+    Type: "user",
+  }
+
+  req := srv.Drive.Permissions.Create(fileID, &perm).TransferOwnership(true)
+
+
+  _, err := req.Do()
   return err
 }
 
