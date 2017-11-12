@@ -33,10 +33,10 @@ var sheetsCmd = &cobra.Command{
 	},
 }
 
-// importCmd represents the import command
-var importCmd = &cobra.Command{
-	Use:   "import",
-	Short: "import TSV to Google sheets",
+// createCmd represents the create command
+var createCmd = &cobra.Command{
+	Use:   "create",
+	Short: "create Google sheets from TSV",
 	Run: func(cmd *cobra.Command, args []string) {
     srv := lib.GetService()
     fname := args[0]
@@ -47,6 +47,51 @@ var importCmd = &cobra.Command{
     }
 
     r, err := srv.ImportSpreadsheet(fname, data)
+    if err != nil {
+      log.Fatalf("Unable to import file: %v", err)
+    }
+    log.Print("Created spreadsheet.")
+
+    log.Print("Sharing...")
+    email := viper.GetString("email")
+
+    err = srv.ShareFile(r.SpreadsheetId, email)
+    if err != nil {
+      log.Fatalf("Unable to share file: %v", err)
+    }
+
+    log.Printf("Complete! View at: %s\n", r.SpreadsheetUrl)
+	},
+}
+
+
+func getFlagOrDie(cmd *cobra.Command, flag string) string {
+    result, err := cmd.Flags().GetString(flag)
+    if err != nil {
+      log.Fatalf("Unable to parse flag %s: %v", flag, err)
+    }
+    return result
+}
+
+// importCmd represents the import command
+var importCmd = &cobra.Command{
+	Use:   "import",
+	Short: "import a TSV to an existing Google sheet",
+	Run: func(cmd *cobra.Command, args []string) {
+    srv := lib.GetService()
+
+    fname := getFlagOrDie("file")
+    ssId := getFlagOrDie("spreadsheet")
+    sheetName := getFlagOrDie("name")
+
+    data, err := lib.TsvToArr(fname)
+    if err != nil {
+      log.Fatalf("Unable to open file: %v", err)
+    }
+    
+
+    // TODO: Create sheet, resize if necessary
+    r, err := srv.ImportSheet(ssId, fname, data)
     if err != nil {
       log.Fatalf("Unable to import file: %v", err)
     }
@@ -173,6 +218,11 @@ func init() {
   shareCmd.Flags().String("email", "", "Email to share file with")
   viper.BindPFlag("email", shareCmd.Flags().Lookup("email"))
 
-	sheetsCmd.AddCommand(importCmd)
+	sheetsCmd.AddCommand(createCmd)
 	sheetsCmd.AddCommand(deleteCmd)
+	sheetsCmd.AddCommand(importCmd)
+
+  importCmd.Flags().String("file", "f", "The file to read data from, if not set use STDIN")
+  importCmd.Flags().String("spreadsheet", "s", "The ID of the spreadsheet to import to")
+  importCmd.Flags().String("name", "n", "The name of the sheet to import to")
 }

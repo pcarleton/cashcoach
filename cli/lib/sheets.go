@@ -51,13 +51,11 @@ func (srv *Service) ImportSpreadsheet(ssName string, data [][]interface{}) (*she
     return nil, err
   }
 
+  cellRange := DefaultRange(data)
 
-  bottomLeft := CellPos{len(data), len(data[0])}
-
-  aRange := ARange(CellPos{}, bottomLeft)
 
   vRange := &sheets.ValueRange{
-    Range: aRange,
+    Range: cellRange.String(),
     Values: data,
   }
 
@@ -71,9 +69,31 @@ func (srv *Service) ImportSpreadsheet(ssName string, data [][]interface{}) (*she
     return nil, err
   }
 
-  // TODO: Return spreadsheet or something
   return ss2,  err
 }
+
+func (srv *Service) ImportSheet(ssId, sheetName string, data [][]interface{}, cellRange CellRange) (*sheets.Spreadsheet, error) {
+
+  sheetRange := SheetRange{sheetName, cellRange}
+
+  vRange := &sheets.ValueRange{
+    Range: sheetRange.String(),
+    Values: data,
+  }
+
+  req := srv.Sheets.Spreadsheets.Values.Update(ssId, sheetRange.String(), vRange)
+
+  req.ValueInputOption("USER_ENTERED")
+
+  resp, err = req.Do()
+
+  if err != nil {
+    return nil, err
+  }
+
+  return resp,  err
+}
+
 
 func (srv *Service) ShareFile(fileID, email string) error {
   perm := drive.Permission{
@@ -112,13 +132,34 @@ type CellPos struct {
   Col int
 }
 
-func (c CellPos) ANotation() string {
+func (c CellPos) A1Notation() string {
   return fmt.Sprintf("%s%d", aRangeLetter(c.Col), c.Row + 1)
 }
 
-func ARange(start, end CellPos) string {
-  return fmt.Sprintf("%s:%s", start.ANotation(), end.ANotation())
+type CellRange struct {
+  Start CellPos
+  End CellPos
 }
+
+func (a CellRange) String() string {
+  return fmt.Sprintf("%s:%s", a.Start.A1Notation(), a.End.A1Notation())
+}
+
+type SheetRange struct {
+  SheetName string
+  Range CellRange
+}
+
+func (s *SheetRange) String string {
+  return fmt.Sprintf("%s!%s", s.SheetName, s.Range.String())
+}
+
+func DefaultRange(data [][]interface{}) CellRange {
+  bottomLeft := CellPos{len(data), len(data[0])}
+
+  return CellRange(CellPos{}, bottomLeft)
+}
+
 
 func TsvToArr(fname string) ([][]interface{}, error) {
     reader, err := os.Open(fname)
