@@ -17,11 +17,13 @@ package cmd
 import (
 	"fmt"
   "log"
+  "os"
   "strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/pcarleton/cashcoach/cli/lib"
+	"github.com/pcarleton/sheets"
 )
 
 // sheetsCmd represents the sheets command
@@ -38,15 +40,15 @@ var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create Google sheets from TSV",
 	Run: func(cmd *cobra.Command, args []string) {
-    srv := lib.GetService()
+    client := lib.GetSheetsClient()
     fname := args[0]
 
-    data, err := lib.TsvToArr(fname)
+    reader, err := os.Open(fname)
     if err != nil {
       log.Fatalf("Unable to open file: %v", err)
     }
 
-    r, err := srv.ImportSpreadsheet(fname, data)
+    r, err := client.CreateSpreadsheetFromTsv(fname, reader)
     if err != nil {
       log.Fatalf("Unable to import file: %v", err)
     }
@@ -55,12 +57,12 @@ var createCmd = &cobra.Command{
     log.Print("Sharing...")
     email := viper.GetString("email")
 
-    err = srv.ShareFile(r.SpreadsheetId, email)
+    err = r.Share(email)
     if err != nil {
       log.Fatalf("Unable to share file: %v", err)
     }
 
-    log.Printf("Complete! View at: %s\n", r.SpreadsheetUrl)
+    log.Printf("Complete! View at: %s\n", r.Url())
 	},
 }
 
@@ -78,20 +80,26 @@ var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "import a TSV to an existing Google sheet",
 	Run: func(cmd *cobra.Command, args []string) {
-    srv := lib.GetService()
+    fname := getFlagOrDie(cmd, "file")
+    ssId := getFlagOrDie(cmd, "spreadsheet")
+    //sheetName := getFlagOrDie(cmd, "name")
 
-    fname := getFlagOrDie("file")
-    ssId := getFlagOrDie("spreadsheet")
-    sheetName := getFlagOrDie("name")
+    client := lib.GetSheetsClient()
 
-    data, err := lib.TsvToArr(fname)
+    reader, err := os.Open(fname)
     if err != nil {
       log.Fatalf("Unable to open file: %v", err)
     }
-    
+    data := sheets.TsvToArr(reader)
+    fmt.Println(data)
+
+    ss, err := client.GetSpreadsheet(ssId)
+    if err != nil {
+      log.Fatalf("Unable to find spreadsheet: %v", err)
+    }
 
     // TODO: Create sheet, resize if necessary
-    r, err := srv.ImportSheet(ssId, fname, data)
+    //r, err := srv.ImportSheet(ssId, fname, data)
     if err != nil {
       log.Fatalf("Unable to import file: %v", err)
     }
@@ -100,12 +108,12 @@ var importCmd = &cobra.Command{
     log.Print("Sharing...")
     email := viper.GetString("email")
 
-    err = srv.ShareFile(r.SpreadsheetId, email)
+    err = client.ShareFile(ss.Id(), email)
     if err != nil {
       log.Fatalf("Unable to share file: %v", err)
     }
 
-    log.Printf("Complete! View at: %s\n", r.SpreadsheetUrl)
+    log.Printf("Complete! View at: %s\n", ss.Url())
 	},
 }
 
@@ -114,10 +122,10 @@ var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete file from Drive",
 	Run: func(cmd *cobra.Command, args []string) {
-    srv := lib.GetService()
+    client := lib.GetSheetsClient()
     fileId := args[0]
 
-    err := srv.Delete(fileId)
+    err := client.Delete(fileId)
     if err != nil {
       log.Fatalf("Unable to delete file: %v", err)
     }
@@ -133,12 +141,12 @@ var shareCmd = &cobra.Command{
 	Use:   "share",
 	Short: "share the specified file with the user specified in config",
 	Run: func(cmd *cobra.Command, args []string) {
-    srv := lib.GetService()
+    client := lib.GetSheetsClient()
     fileID := args[0]
 
     email := viper.GetString("email")
 
-    err := srv.ShareFile(fileID, email)
+    err := client.ShareFile(fileID, email)
     if err != nil {
       log.Fatalf("Unable to share file: %v", err)
     }
@@ -154,8 +162,8 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "list Google sheets",
 	Run: func(cmd *cobra.Command, args []string) {
-    srv := lib.GetService()
-		files, err := srv.ListSpreadsheets(flagQuery)
+    client := lib.GetSheetsClient()
+		files, err := client.ListFiles(flagQuery)
 		if err != nil {
 			log.Fatalf("Unable to retrieve data from drive. %v", err)
 		}
