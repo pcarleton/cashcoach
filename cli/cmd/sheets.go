@@ -91,27 +91,20 @@ var importCmd = &cobra.Command{
       log.Fatalf("Unable to open file: %v", err)
     }
     data := sheets.TsvToArr(reader)
-    fmt.Println(data)
 
+    fmt.Println(data)
     ss, err := client.GetSpreadsheet(ssId)
     if err != nil {
       log.Fatalf("Unable to find spreadsheet: %v", err)
     }
 
-    // TODO: Create sheet, resize if necessary
-    //r, err := srv.ImportSheet(ssId, fname, data)
-    if err != nil {
-      log.Fatalf("Unable to import file: %v", err)
-    }
-    log.Print("Created spreadsheet.")
 
-    log.Print("Sharing...")
-    email := viper.GetString("email")
+    _, err = ss.AddSheet(fname)
 
-    err = client.ShareFile(ss.Id(), email)
     if err != nil {
-      log.Fatalf("Unable to share file: %v", err)
+      log.Fatalf("Unable to add sheet: %v", err)
     }
+
 
     log.Printf("Complete! View at: %s\n", ss.Url())
 	},
