@@ -94,7 +94,9 @@ var transactionsCmd = &cobra.Command{
 		}
 
 
-		log.Printf("Showing transactions for %s to %s", interval.Start, interval.End)
+    masks := lib.Masks(resp.Accounts)
+    log.Printf("Accounts ending in: %s", strings.Join(masks, ", "))
+		log.Printf("%s to %s", interval.Start, interval.End)
 
 		headers := []string{
 			"account",

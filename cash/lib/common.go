@@ -56,6 +56,16 @@ func (a *Account) NickMap(accts []plaid.Account) map[string]string {
   return nickMap
 }
 
+func Masks(accts []plaid.Account) []string {
+  masks := make([]string, len(accts))
+
+  for i, acct := range(accts) {
+    masks[i] = acct.Mask
+  }
+
+  return masks
+}
+
 func GetAccounts() ([]Account, error) {
     accounts := make([]Account, 0, 10)
     err := viper.UnmarshalKey("accounts", &accounts)
