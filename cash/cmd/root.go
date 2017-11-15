@@ -28,7 +28,7 @@ var cfgFile string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "cashcoach",
+	Use:   "cash",
 	Short: "A personal finance command line utility",
 	Long:  `Interacts with the Plaid API to extract reports into Google Sheets.`,
 }

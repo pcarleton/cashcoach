@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/pcarleton/cashcoach/cli/lib"
+	"github.com/pcarleton/cashcoach/cash/lib"
 )
 
 // configCmd represents the config command

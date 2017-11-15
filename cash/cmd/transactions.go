@@ -20,7 +20,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/pcarleton/cashcoach/cli/lib"
+	"github.com/pcarleton/cashcoach/cash/lib"
 	"github.com/spf13/cobra"
 )
 

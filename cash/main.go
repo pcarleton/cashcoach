@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/pcarleton/cashcoach/cli/cmd"
+import "github.com/pcarleton/cashcoach/cash/cmd"
 
 func main() {
 	cmd.Execute()
