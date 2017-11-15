@@ -82,7 +82,7 @@ var importCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
     fname := getFlagOrDie(cmd, "file")
     ssId := getFlagOrDie(cmd, "spreadsheet")
-    //sheetName := getFlagOrDie(cmd, "name")
+    sheetName := getFlagOrDie(cmd, "name")
 
     client := lib.GetSheetsClient()
 
@@ -92,17 +92,24 @@ var importCmd = &cobra.Command{
     }
     data := sheets.TsvToArr(reader)
 
-    fmt.Println(data)
     ss, err := client.GetSpreadsheet(ssId)
     if err != nil {
       log.Fatalf("Unable to find spreadsheet: %v", err)
     }
 
+    sheet := ss.GetSheet(sheetName)
 
-    _, err = ss.AddSheet(fname)
+    if sheet == nil {
+      sheet, err = ss.AddSheet(sheetName)
 
+      if err != nil {
+        log.Fatalf("Unable to add sheet: %v", err)
+      }
+    }
+
+    err = sheet.Update(data)
     if err != nil {
-      log.Fatalf("Unable to add sheet: %v", err)
+      log.Fatalf("Unable to add data to sheet: %v", err)
     }
 
 
