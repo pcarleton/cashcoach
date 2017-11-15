@@ -1,6 +1,7 @@
 package plaid
 
 import (
+  "time"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 const (
 	DevURL = "https://development.plaid.com"
 	SandboxURL = "https://sandbox.plaid.com"
+  DateFmt = "2006-01-02"
 )
 
 type Client struct {
@@ -146,15 +148,15 @@ type Transaction struct {
 	Name         string   `json:"name"`
 }
 
-func (c *Client) Transactions(accessToken, startDate, endDate string) (TransactionResponse, error) {
+func (c *Client) Transactions(accessToken string, startDate, endDate time.Time) (TransactionResponse, error) {
 	endpoint := "/transactions/get"
 
 	request := TransactionRequest{
 		ClientID:    c.clientID,
 		Secret:      c.secret,
 		AccessToken: accessToken,
-		StartDate:   startDate,
-		EndDate:     endDate,
+		StartDate:   startDate.Format(DateFmt),
+		EndDate:     endDate.Format(DateFmt),
 	}
 
 	resp := TransactionResponse{}

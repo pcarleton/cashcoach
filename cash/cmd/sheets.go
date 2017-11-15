@@ -67,22 +67,15 @@ var createCmd = &cobra.Command{
 }
 
 
-func getFlagOrDie(cmd *cobra.Command, flag string) string {
-    result, err := cmd.Flags().GetString(flag)
-    if err != nil {
-      log.Fatalf("Unable to parse flag %s: %v", flag, err)
-    }
-    return result
-}
 
 // importCmd represents the import command
 var importCmd = &cobra.Command{
 	Use:   "import",
 	Short: "import a TSV to an existing Google sheet",
 	Run: func(cmd *cobra.Command, args []string) {
-    fname := getFlagOrDie(cmd, "file")
-    ssId := getFlagOrDie(cmd, "spreadsheet")
-    sheetName := getFlagOrDie(cmd, "name")
+    fname := lib.StringFlagOrDie(cmd, "file")
+    ssId := lib.StringFlagOrDie(cmd, "spreadsheet")
+    sheetName := lib.StringFlagOrDie(cmd, "name")
 
     client := lib.GetSheetsClient()
 

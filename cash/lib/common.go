@@ -1,14 +1,16 @@
 package lib
 
 import (
+  "log"
   "time"
 
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/pcarleton/cashcoach/api/plaid"
 )
 
 const (
-  DateFmt = "2006-01-02"
+  DateFmt = plaid.DateFmt
 )
 
 type Account struct{
@@ -16,6 +18,33 @@ type Account struct{
   Token string
   Nicknames map[string]string
 }
+
+
+func DateOrDie(date string) time.Time {
+  result, err := time.Parse(DateFmt, date)
+  if err != nil {
+    log.Fatalf("Unable to parse date %s: %v", date, err)
+  }
+  return result
+}
+
+func StringFlagOrDie(cmd *cobra.Command, flag string) string {
+  result, err := cmd.Flags().GetString(flag)
+  if err != nil {
+    log.Fatalf("Unable to parse flag %s: %v", flag, err)
+  }
+  return result
+}
+
+func IntFlagOrDie(cmd *cobra.Command, flag string) int {
+  result, err := cmd.Flags().GetInt(flag)
+  if err != nil {
+    log.Fatalf("Unable to parse flag %s: %v", flag, err)
+  }
+  return result
+}
+
+
 
 func (a *Account) NickMap(accts []plaid.Account) map[string]string {
   nickMap := make(map[string]string)
@@ -58,24 +87,19 @@ func GetClient() plaid.Client {
 }
 
 type Interval struct {
-  Start string
-  End string
+  Start time.Time
+  End time.Time
 }
 
+func NDaysAgo(n int) time.Time {
+  today := time.Now()
+  return today.Add(time.Duration(n * -24) * time.Hour )
+}
 
 func LastNDays(n int) Interval {
-  today := time.Now()
-  nDaysAgo := today.Add(time.Duration(n * -24) * time.Hour )
-
   return Interval{
-    Start: nDaysAgo.Format(DateFmt),
-    End: today.Format(DateFmt),
+    Start: NDaysAgo(n),
+    End: time.Now(),
   }
 }
-
-func TodayStr() string {
-  return time.Now().Format(DateFmt)
-}
-
-
 

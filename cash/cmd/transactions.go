@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+  "time"
 	"os"
 	"strings"
 
@@ -24,25 +25,38 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func pickInterval() lib.Interval {
-	if flagLastN != 0 {
-		return lib.LastNDays(flagLastN)
+
+
+func pickInterval(cmd *cobra.Command) lib.Interval {
+  lastN := lib.IntFlagOrDie(cmd, "lastN")
+	if lastN != 0 {
+		return lib.LastNDays(lastN)
 	}
 
-	start := flagStart
-	end := flagEnd
-	if end == "" && start != "" {
-		// Pick today as end
-		end = lib.TodayStr()
-	}
+  var startT time.Time
+  var endT time.Time
 
-	if end == "" && start == "" {
-		return lib.LastNDays(30)
-	}
+  start := lib.StringFlagOrDie(cmd, "start")
+  end := lib.StringFlagOrDie(cmd, "end")
+
+  if start != "" {
+    startT = lib.DateOrDie(start)
+  } else {
+    startT = lib.NDaysAgo(30)
+  }
+
+  if end != "" {
+    if start == "" {
+      log.Fatalf("Must specify --start if you specify an --end")
+    }
+    endT = lib.DateOrDie(end)
+  } else {
+    endT = time.Now()
+  }
 
 	return lib.Interval{
-		Start: start,
-		End:   end,
+		Start: startT,
+		End:   endT,
 	}
 }
 
@@ -66,7 +80,7 @@ var transactionsCmd = &cobra.Command{
 		}
 
 		client := lib.GetClient()
-		interval := pickInterval()
+		interval := pickInterval(cmd)
 
 		resp, err := client.Transactions(acct.Token, interval.Start, interval.End)
 
@@ -92,8 +106,6 @@ var transactionsCmd = &cobra.Command{
 
     nickMap := acct.NickMap(resp.Accounts)
 
-    log.Printf("Nicks: %+v", nickMap)
-    log.Printf("Names: %+v", acct.Nicknames)
 
 		fmt.Println(strings.Join(headers, "\t"))
 		// TODO: Allow JSON output via flags
@@ -111,16 +123,12 @@ var transactionsCmd = &cobra.Command{
 	},
 }
 
-var flagStart string
-var flagEnd string
-var flagLastN int
-
 func init() {
 	RootCmd.AddCommand(transactionsCmd)
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	transactionsCmd.PersistentFlags().StringVarP(&flagStart, "start", "s", "", "Start date to find transactions")
-	transactionsCmd.PersistentFlags().StringVarP(&flagEnd, "end", "e", "", "End date to find transactions (inclusive)")
-	transactionsCmd.PersistentFlags().IntVarP(&flagLastN, "lastN", "l", 0, "Fecth transactions for the last N days")
+	transactionsCmd.PersistentFlags().StringP("start", "s", "", "Start date to find transactions (like 2006-01-03)")
+	transactionsCmd.PersistentFlags().StringP("end", "e", "", "End date to find transactions (inclusive)")
+	transactionsCmd.PersistentFlags().IntP("lastN", "l", 0, "Fecth transactions for the last N days")
 	transactionsCmd.Flags().StringP("delimiter", "d", "\t", "Delimiter to use for printing")
 }
