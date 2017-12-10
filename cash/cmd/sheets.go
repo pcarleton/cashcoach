@@ -39,16 +39,18 @@ var sheetsCmd = &cobra.Command{
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create Google sheets from TSV",
+  Args: cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
     client := lib.GetSheetsClient()
-    fname := args[0]
+    fname := lib.StringFlagOrDie(cmd, "file")
+    title := lib.StringFlagOrDie(cmd, "title")
 
     reader, err := os.Open(fname)
     if err != nil {
       log.Fatalf("Unable to open file: %v", err)
     }
 
-    r, err := client.CreateSpreadsheetFromTsv(fname, reader)
+    r, err := client.CreateSpreadsheetFromTsv(title, reader)
     if err != nil {
       log.Fatalf("Unable to import file: %v", err)
     }
@@ -220,10 +222,14 @@ func init() {
   viper.BindPFlag("email", shareCmd.Flags().Lookup("email"))
 
 	sheetsCmd.AddCommand(createCmd)
+  createCmd.Flags().StringP("file", "f", "", "The file to read data from, if not set use STDIN")
+  createCmd.Flags().StringP("title", "t", "", "The title to give the spreadsheet")
+
+
 	sheetsCmd.AddCommand(deleteCmd)
 	sheetsCmd.AddCommand(importCmd)
 
-  importCmd.Flags().String("file", "f", "The file to read data from, if not set use STDIN")
-  importCmd.Flags().String("spreadsheet", "s", "The ID of the spreadsheet to import to")
-  importCmd.Flags().String("name", "n", "The name of the sheet to import to")
+  importCmd.Flags().StringP("file", "f", "", "The file to read data from, if not set use STDIN")
+  importCmd.Flags().StringP("spreadsheet", "s", "", "The ID of the spreadsheet to import to")
+  importCmd.Flags().StringP("name", "n", "", "The name of the sheet to import to")
 }
