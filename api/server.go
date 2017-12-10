@@ -94,10 +94,8 @@ func transactionsHandler(profile *auth.Profile, w http.ResponseWriter, r *http.R
 	now := time.Now()
 	lastMonth := now.AddDate(0, -1, 0)
 
-	referenceTime := "2006-01-02"
-
 	transactions, err := config.Plaid.Transactions(
-		person.Accounts[0].Token, lastMonth.Format(referenceTime), now.Format(referenceTime))
+		person.Accounts[0].Token, lastMonth, now)
 
 	if err != nil {
 		return appErrorf(err, "Error getting transactions")
