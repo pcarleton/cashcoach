@@ -5,16 +5,31 @@ import PlaidLink from 'react-plaid-link';
 
 
 class AddAccount extends Component {
+  constructor() {
+    this.handleOnSuccess = this.handleOnSuccess.bind(this);
+  }
+
   render () {
         return <PlaidLink
           publicKey="5cf2c831a6e43805a92b01fa703ee8"
           product="transactions"
+          token="PUBLIC_TOKEN"
           env="sandbox"
           clientName="Cash Coach"
           onSuccess={this.handleOnSuccess}
           apiVersion="v2"
           buttonText="Add Account"
         />
+  }
+
+  handleOnSuccess(resp) {
+    console.log("success!");
+    console.log(resp);
+    const cb = (data) => {
+      console.log("resp!");
+      console.log(data);
+    }
+    Client.addAccount(cb, 'new account1', resp);
   }
 
 }
@@ -69,7 +84,7 @@ class Home extends Component {
     }
     
     const accounts = Client.accounts(cb);
-    Client.transactions(cb);
+    //Client.transactions(cb);
     //this.setState({accounts: accounts});
   }
 
@@ -80,6 +95,7 @@ class Home extends Component {
     return (
         <div>
         <Account model={model} />
+        <AddAccount model={model} />
 
       </div>
     )
