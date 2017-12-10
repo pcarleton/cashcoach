@@ -165,6 +165,17 @@ type Transaction struct {
 	Name         string   `json:"name"`
 }
 
+type PublicTokenRequest struct {
+	ClientID    string `json:"client_id"`
+	Secret      string `json:"secret"`
+	AccessToken string `json:"access_token"`
+}
+
+type PublicTokenResponse struct {
+	RequestID         string        `json:"request_id"`
+	PublicToken string        `json:"public_token"`
+}
+
 func (c *Client) Transactions(accessToken string, startDate, endDate time.Time) (TransactionResponse, error) {
 	endpoint := "/transactions/get"
 
@@ -177,6 +188,25 @@ func (c *Client) Transactions(accessToken string, startDate, endDate time.Time) 
 	}
 
 	resp := TransactionResponse{}
+	err := c.post(endpoint, request, &resp)
+	if err != nil {
+		return resp, err
+	}
+
+	return resp, nil
+}
+
+
+func (c *Client) CreatePublicToken(accessToken string) (PublicTokenResponse, error) {
+	endpoint := "/item/public_token/create"
+
+	request := PublicTokenRequest{
+		ClientID:    c.clientID,
+		Secret:      c.secret,
+		AccessToken: accessToken,
+	}
+
+	resp := PublicTokenResponse{}
 	err := c.post(endpoint, request, &resp)
 	if err != nil {
 		return resp, err
