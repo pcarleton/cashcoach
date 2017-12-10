@@ -1,18 +1,18 @@
 package plaid
 
 import (
-  "time"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
 )
 
 const (
-	DevURL = "https://development.plaid.com"
+	DevURL     = "https://development.plaid.com"
 	SandboxURL = "https://sandbox.plaid.com"
-  DateFmt = "2006-01-02"
+	DateFmt    = "2006-01-02"
 )
 
 type Client struct {
@@ -57,6 +57,14 @@ func (c *Client) UpdateAccessToken(accessToken string) (UpdateAccessTokenRespons
 	return resp, nil
 }
 
+type ApiError struct {
+	Response *ErrorResponse
+}
+
+func (e ApiError) Error() string {
+	return fmt.Sprintf("%+v", e.Response)
+}
+
 func (c *Client) post(endpoint string, req interface{}, resp interface{}) error {
 
 	jsonText, err := json.Marshal(req)
@@ -77,6 +85,15 @@ func (c *Client) post(endpoint string, req interface{}, resp interface{}) error 
 
 	if err != nil {
 		return err
+	}
+
+	if postResp.StatusCode != 200 {
+		errResp := ErrorResponse{}
+		if err := json.Unmarshal(respBody, &errResp); err != nil {
+			return err
+		}
+
+		return ApiError{&errResp}
 	}
 
 	if err := json.Unmarshal(respBody, resp); err != nil {
@@ -120,7 +137,7 @@ type TransactionResponse struct {
 	TotalTransactions int32         `json:"total_transactions"`
 }
 
-type ApiError struct {
+type ErrorResponse struct {
 	Type           string `json:"error_type"`
 	Code           string `json:"error_code"`
 	Message        string `json:"error_message"`
@@ -128,11 +145,11 @@ type ApiError struct {
 }
 
 type Item struct {
-	AvailableProducts []string `json:"available_products"`
-	BilledProducts    []string `json:"billed_products"`
-	Error             ApiError `json:"error"`
-	InstitutionID     string   `json:"institution_id"`
-	ItemID            string   `json:"item_id"`
+	AvailableProducts []string      `json:"available_products"`
+	BilledProducts    []string      `json:"billed_products"`
+	Error             ErrorResponse `json:"error"`
+	InstitutionID     string        `json:"institution_id"`
+	ItemID            string        `json:"item_id"`
 }
 
 type Transaction struct {
@@ -177,7 +194,7 @@ type ExchangeRequest struct {
 type ExchangeResponse struct {
 	AccessToken string `json:"access_token"`
 	ItemID      string `json:"item_id"`
-	ApiError
+	ErrorResponse
 }
 
 func (c *Client) Exchange(publicToken string) (ExchangeResponse, error) {
