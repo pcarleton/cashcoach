@@ -1,8 +1,10 @@
 package lib
 
 import (
+  "fmt"
   "log"
   "time"
+  "encoding/json"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -111,5 +113,14 @@ func LastNDays(n int) Interval {
     Start: NDaysAgo(n),
     End: time.Now(),
   }
+}
+
+func OutputJson(val interface{}) error {
+  valj, err := json.Marshal(val)
+  if err != nil {
+    return err
+  }
+  fmt.Println(string(valj))
+  return nil
 }
 

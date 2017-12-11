@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/pcarleton/cashcoach/cash/lib"
+	"github.com/pcarleton/cashcoach/api/plaid"
 	"github.com/spf13/cobra"
 )
 
@@ -98,19 +99,37 @@ var transactionsCmd = &cobra.Command{
     log.Printf("Accounts ending in: %s", strings.Join(masks, ", "))
 		log.Printf("%s to %s", interval.Start, interval.End)
 
+    nickMap := acct.NickMap(resp.Accounts)
+
+    jsonOut, err := cmd.Flags().GetBool("json")
+		if err != nil {
+			log.Fatal(err)
+		}
+
+    if jsonOut {
+      // Might regret messing with the data like this later... 
+      newTrans := make([]plaid.Transaction, len(resp.Transactions))
+      for i, t := range resp.Transactions {
+				t.AccountID = nickMap[t.AccountID]
+        newTrans[i] = t
+      }
+
+      lib.OutputJson(newTrans)
+      return
+    }
+
+
 		headers := []string{
 			"account",
 			"date",
 			"description",
 			"category",
 			"amount",
+      "shared",
 		}
-
-    nickMap := acct.NickMap(resp.Accounts)
 
 
 		fmt.Println(strings.Join(headers, "\t"))
-		// TODO: Allow JSON output via flags
 		for _, trans := range resp.Transactions {
 			pieces := []string{
 				nickMap[trans.AccountID],
@@ -118,12 +137,14 @@ var transactionsCmd = &cobra.Command{
 				trans.Name,
 				strings.Join(trans.Category, ":"),
 				fmt.Sprintf("%.2f", trans.Amount),
+        "true",
 			}
 
 			fmt.Println(strings.Join(pieces, delimiter))
 		}
 	},
 }
+
 
 func init() {
 	RootCmd.AddCommand(transactionsCmd)
@@ -133,4 +154,5 @@ func init() {
 	transactionsCmd.PersistentFlags().StringP("end", "e", "", "End date to find transactions (inclusive)")
 	transactionsCmd.PersistentFlags().IntP("lastN", "l", 0, "Fecth transactions for the last N days")
 	transactionsCmd.Flags().StringP("delimiter", "d", "\t", "Delimiter to use for printing")
+	transactionsCmd.Flags().BoolP("json", "j", false, "When true, output transaction data as JSON")
 }
