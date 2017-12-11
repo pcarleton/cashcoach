@@ -5,7 +5,8 @@ import PlaidLink from 'react-plaid-link';
 
 
 class AddAccount extends Component {
-  constructor() {
+  constructor(props) {
+    super(props);
     this.handleOnSuccess = this.handleOnSuccess.bind(this);
   }
 
@@ -29,7 +30,7 @@ class AddAccount extends Component {
       console.log("resp!");
       console.log(data);
     }
-    Client.addAccount(cb, 'new account1', resp);
+    //Client.addAccount(cb, 'new account1', resp);
   }
 
 }
