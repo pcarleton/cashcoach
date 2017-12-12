@@ -31,7 +31,7 @@ var sheetsCmd = &cobra.Command{
 	Use:   "sheets",
 	Short: "Interact with Google Sheets",
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Println("sheets called")
+    cmd.Help()
 	},
 }
 
