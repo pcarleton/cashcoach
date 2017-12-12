@@ -125,7 +125,6 @@ var transactionsCmd = &cobra.Command{
 			"description",
 			"category",
 			"amount",
-      "shared",
 		}
 
 
@@ -137,7 +136,6 @@ var transactionsCmd = &cobra.Command{
 				trans.Name,
 				strings.Join(trans.Category, ":"),
 				fmt.Sprintf("%.2f", trans.Amount),
-        "true",
 			}
 
 			fmt.Println(strings.Join(pieces, delimiter))

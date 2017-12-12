@@ -51,7 +51,7 @@ var ledgerImportCmd = &cobra.Command{
     }
 
     for _, t := range trans {
-      lTrans := makeLTrans(&t)
+      lTrans := makeLTrans(&t, "taylor")
       fmt.Println(lTrans.String())
       fmt.Println("")
     }
@@ -61,8 +61,8 @@ var ledgerImportCmd = &cobra.Command{
 func splitTrans(t *plaid.Transaction, acct1, acct2 string) ledger.Transaction {
   changes := []ledger.Change{
     {ledger.Expense(t.Category...), t.Amount},
-    {ledger.Liability(t.AccountID, acct), -1*t.Amount/2},
-    {Account: ledger.Liability(t.AccountID, acct)},
+    {ledger.Liability(t.AccountID, acct1), -1*t.Amount/2},
+    {Account: ledger.Liability(t.AccountID, acct2)},
   }
 
   date, err := time.Parse(plaid.DateFmt, t.Date)
