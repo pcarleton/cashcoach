@@ -15,11 +15,14 @@
 package cmd
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"fmt"
+  "strconv"
 	"log"
 	"os"
 	"time"
+  "bufio"
+  "strings"
 
 	"github.com/spf13/cobra"
 
@@ -36,26 +39,87 @@ var ledgerImportCmd = &cobra.Command{
 
 		filename := lib.StringFlagOrDie(cmd, "file")
 
-		reader, err := os.Open(filename)
+    ttrans, err :=  readTsv(filename)
+
 		if err != nil {
-			log.Fatalf("Unable to open file: %v", err)
+			log.Fatalf("Unable to load transactions: %v", err)
 		}
 
-		var trans []plaid.Transaction
+    fmt.Printf("%+v", ttrans)
+    
+    
 
-		decoder := json.NewDecoder(reader)
+		//reader, err := os.Open(filename)
 
-		err = decoder.Decode(&trans)
-		if err != nil {
-			log.Fatalf("Unable to read json", err)
-		}
 
-		for _, t := range trans {
-			lTrans := makeLTrans(&t, "taylor")
-			fmt.Println(lTrans.String())
-			fmt.Println("")
-		}
+
+		//var trans []plaid.Transaction
+
+		//decoder := json.NewDecoder(reader)
+
+		//err = decoder.Decode(&trans)
+		//if err != nil {
+		//	log.Fatalf("Unable to read json", err)
+		//}
+
+		//for _, t := range trans {
+		//	lTrans := makeLTrans(&t, "taylor")
+		//	fmt.Println(lTrans.String())
+		//	fmt.Println("")
+		//}
 	},
+}
+
+type TableTrans struct {
+  Account string // Nick name, human readable
+  Date time.Time
+  Description string
+  Category string
+  Label string
+  Amount float64
+}
+
+func readTsv(fileName string) ([]TableTrans, error) {
+		reader, err := os.Open(fileName)
+		if err != nil {
+			return nil, err
+		}
+
+    scanner := bufio.NewScanner(reader)
+    scanner.Scan()
+    headers := strings.Split(scanner.Text(), "\t")
+    fmt.Println(headers)
+
+    ttrans := make([]TableTrans, 1)
+
+    for scanner.Scan() {
+      line := scanner.Text()
+      pieces := strings.Split(line, "\t")
+      trans := make(map[string]string)
+
+      for idx, header := range headers {
+        trans[header] = pieces[idx]
+      }
+
+      date, err := time.Parse("2006-01-02", trans["date"])
+      if err != nil {
+        return nil, fmt.Errorf("Invalid date %s in line {%s}", trans["date"], line)
+      }
+
+      amount, err := strconv.ParseFloat(trans["amount"], 64)
+      if err != nil {
+        return nil, fmt.Errorf("Invalid amount %s in line {%s}", trans["amount"], line)
+      }
+      ttrans = append(ttrans, TableTrans{
+        Account: trans["account"],
+        Date: date,
+        Description: trans["description"],
+        Category: trans["category"],
+        Amount: amount,
+      })
+    }
+
+    return ttrans, nil
 }
 
 func splitTrans(t *plaid.Transaction, acct1, acct2 string) ledger.Transaction {
