@@ -58,10 +58,30 @@ var ledgerImportCmd = &cobra.Command{
 	},
 }
 
-func makeLTrans(t *plaid.Transaction) ledger.Transaction {
+func splitTrans(t *plaid.Transaction, acct1, acct2 string) ledger.Transaction {
   changes := []ledger.Change{
     {ledger.Expense(t.Category...), t.Amount},
-    {Account: ledger.Liability(t.AccountID, "shared")},
+    {ledger.Liability(t.AccountID, acct), -1*t.Amount/2},
+    {Account: ledger.Liability(t.AccountID, acct)},
+  }
+
+  date, err := time.Parse(plaid.DateFmt, t.Date)
+  if err != nil {
+    log.Fatalf("Unable to parse date: %s", err)
+  }
+
+  return ledger.Transaction{
+    Date: date,
+    Description: t.Name,
+    Changes: changes,
+  }
+}
+
+
+func makeLTrans(t *plaid.Transaction, acct string) ledger.Transaction {
+  changes := []ledger.Change{
+    {ledger.Expense(t.Category...), t.Amount},
+    {Account: ledger.Liability(t.AccountID, acct)},
   }
 
   date, err := time.Parse(plaid.DateFmt, t.Date)
