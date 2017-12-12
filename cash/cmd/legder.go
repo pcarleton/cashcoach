@@ -15,85 +15,84 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
-  "os"
-  "log"
-  "encoding/json"
-  "time"
+	"log"
+	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/pcarleton/cashcoach/api/plaid"
 	"github.com/pcarleton/cashcoach/cash/lib"
 	"github.com/pcarleton/cashcoach/cash/lib/ledger"
-	"github.com/pcarleton/cashcoach/api/plaid"
 )
 
 var ledgerImportCmd = &cobra.Command{
 	Use:   "import",
 	Short: "Import a TSV into ledger format",
 	Run: func(cmd *cobra.Command, args []string) {
-    // TODO: read from stdin if no file specified
+		// TODO: read from stdin if no file specified
 
-    filename := lib.StringFlagOrDie(cmd, "file")
+		filename := lib.StringFlagOrDie(cmd, "file")
 
-    reader, err := os.Open(filename)
-    if err != nil {
-      log.Fatalf("Unable to open file: %v", err)
-    }
+		reader, err := os.Open(filename)
+		if err != nil {
+			log.Fatalf("Unable to open file: %v", err)
+		}
 
-    var trans []plaid.Transaction
+		var trans []plaid.Transaction
 
-    decoder := json.NewDecoder(reader)
+		decoder := json.NewDecoder(reader)
 
-    err = decoder.Decode(&trans)
-    if err != nil {
-      log.Fatalf("Unable to read json", err)
-    }
+		err = decoder.Decode(&trans)
+		if err != nil {
+			log.Fatalf("Unable to read json", err)
+		}
 
-    for _, t := range trans {
-      lTrans := makeLTrans(&t, "taylor")
-      fmt.Println(lTrans.String())
-      fmt.Println("")
-    }
+		for _, t := range trans {
+			lTrans := makeLTrans(&t, "taylor")
+			fmt.Println(lTrans.String())
+			fmt.Println("")
+		}
 	},
 }
 
 func splitTrans(t *plaid.Transaction, acct1, acct2 string) ledger.Transaction {
-  changes := []ledger.Change{
-    {ledger.Expense(t.Category...), t.Amount},
-    {ledger.Liability(t.AccountID, acct1), -1*t.Amount/2},
-    {Account: ledger.Liability(t.AccountID, acct2)},
-  }
+	changes := []ledger.Change{
+		{ledger.Expense(t.Category...), t.Amount},
+		{ledger.Liability(t.AccountID, acct1), -1 * t.Amount / 2},
+		{Account: ledger.Liability(t.AccountID, acct2)},
+	}
 
-  date, err := time.Parse(plaid.DateFmt, t.Date)
-  if err != nil {
-    log.Fatalf("Unable to parse date: %s", err)
-  }
+	date, err := time.Parse(plaid.DateFmt, t.Date)
+	if err != nil {
+		log.Fatalf("Unable to parse date: %s", err)
+	}
 
-  return ledger.Transaction{
-    Date: date,
-    Description: t.Name,
-    Changes: changes,
-  }
+	return ledger.Transaction{
+		Date:        date,
+		Description: t.Name,
+		Changes:     changes,
+	}
 }
 
-
 func makeLTrans(t *plaid.Transaction, acct string) ledger.Transaction {
-  changes := []ledger.Change{
-    {ledger.Expense(t.Category...), t.Amount},
-    {Account: ledger.Liability(t.AccountID, acct)},
-  }
+	changes := []ledger.Change{
+		{ledger.Expense(t.Category...), t.Amount},
+		{Account: ledger.Liability(t.AccountID, acct)},
+	}
 
-  date, err := time.Parse(plaid.DateFmt, t.Date)
-  if err != nil {
-    log.Fatalf("Unable to parse date: %s", err)
-  }
+	date, err := time.Parse(plaid.DateFmt, t.Date)
+	if err != nil {
+		log.Fatalf("Unable to parse date: %s", err)
+	}
 
-  return ledger.Transaction{
-    Date: date,
-    Description: t.Name,
-    Changes: changes,
-  }
+	return ledger.Transaction{
+		Date:        date,
+		Description: t.Name,
+		Changes:     changes,
+	}
 }
 
 // ledgerCmd represents the ledger command
@@ -107,6 +106,6 @@ var ledgerCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(ledgerCmd)
 
-  ledgerCmd.AddCommand(ledgerImportCmd)
-  ledgerImportCmd.Flags().StringP("file", "f", "", "File to read transaction data from")
+	ledgerCmd.AddCommand(ledgerImportCmd)
+	ledgerImportCmd.Flags().StringP("file", "f", "", "File to read transaction data from")
 }

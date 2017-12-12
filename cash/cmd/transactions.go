@@ -17,43 +17,41 @@ package cmd
 import (
 	"fmt"
 	"log"
-  "time"
 	"os"
 	"strings"
+	"time"
 
-	"github.com/pcarleton/cashcoach/cash/lib"
 	"github.com/pcarleton/cashcoach/api/plaid"
+	"github.com/pcarleton/cashcoach/cash/lib"
 	"github.com/spf13/cobra"
 )
 
-
-
 func pickInterval(cmd *cobra.Command) lib.Interval {
-  lastN := lib.IntFlagOrDie(cmd, "lastN")
+	lastN := lib.IntFlagOrDie(cmd, "lastN")
 	if lastN != 0 {
 		return lib.LastNDays(lastN)
 	}
 
-  var startT time.Time
-  var endT time.Time
+	var startT time.Time
+	var endT time.Time
 
-  start := lib.StringFlagOrDie(cmd, "start")
-  end := lib.StringFlagOrDie(cmd, "end")
+	start := lib.StringFlagOrDie(cmd, "start")
+	end := lib.StringFlagOrDie(cmd, "end")
 
-  if start != "" {
-    startT = lib.DateOrDie(start)
-  } else {
-    startT = lib.NDaysAgo(30)
-  }
+	if start != "" {
+		startT = lib.DateOrDie(start)
+	} else {
+		startT = lib.NDaysAgo(30)
+	}
 
-  if end != "" {
-    if start == "" {
-      log.Fatalf("Must specify --start if you specify an --end")
-    }
-    endT = lib.DateOrDie(end)
-  } else {
-    endT = time.Now()
-  }
+	if end != "" {
+		if start == "" {
+			log.Fatalf("Must specify --start if you specify an --end")
+		}
+		endT = lib.DateOrDie(end)
+	} else {
+		endT = time.Now()
+	}
 
 	return lib.Interval{
 		Start: startT,
@@ -89,35 +87,33 @@ var transactionsCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-    delimiter, err := cmd.Flags().GetString("delimiter")
+		delimiter, err := cmd.Flags().GetString("delimiter")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-
-    masks := lib.Masks(resp.Accounts)
-    log.Printf("Accounts ending in: %s", strings.Join(masks, ", "))
+		masks := lib.Masks(resp.Accounts)
+		log.Printf("Accounts ending in: %s", strings.Join(masks, ", "))
 		log.Printf("%s to %s", interval.Start, interval.End)
 
-    nickMap := acct.NickMap(resp.Accounts)
+		nickMap := acct.NickMap(resp.Accounts)
 
-    jsonOut, err := cmd.Flags().GetBool("json")
+		jsonOut, err := cmd.Flags().GetBool("json")
 		if err != nil {
 			log.Fatal(err)
 		}
 
-    if jsonOut {
-      // Might regret messing with the data like this later... 
-      newTrans := make([]plaid.Transaction, len(resp.Transactions))
-      for i, t := range resp.Transactions {
+		if jsonOut {
+			// Might regret messing with the data like this later...
+			newTrans := make([]plaid.Transaction, len(resp.Transactions))
+			for i, t := range resp.Transactions {
 				t.AccountID = nickMap[t.AccountID]
-        newTrans[i] = t
-      }
+				newTrans[i] = t
+			}
 
-      lib.OutputJson(newTrans)
-      return
-    }
-
+			lib.OutputJson(newTrans)
+			return
+		}
 
 		headers := []string{
 			"account",
@@ -126,7 +122,6 @@ var transactionsCmd = &cobra.Command{
 			"category",
 			"amount",
 		}
-
 
 		fmt.Println(strings.Join(headers, "\t"))
 		for _, trans := range resp.Transactions {
@@ -142,7 +137,6 @@ var transactionsCmd = &cobra.Command{
 		}
 	},
 }
-
 
 func init() {
 	RootCmd.AddCommand(transactionsCmd)

@@ -16,8 +16,8 @@ package cmd
 
 import (
 	"fmt"
-  "os"
-  "log"
+	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -48,7 +48,7 @@ var publicTokenCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-  	fmt.Println(resp.PublicToken)
+		fmt.Println(resp.PublicToken)
 	},
 }
 
@@ -63,5 +63,5 @@ var plaidCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(plaidCmd)
 
-  plaidCmd.AddCommand(publicTokenCmd)
+	plaidCmd.AddCommand(publicTokenCmd)
 }
